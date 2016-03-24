@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["Trans","Types of state transitions."]],"struct":[["StateMachine","A simple stack-based state machine (pushdown automaton)."]],"trait":[["State","A trait which defines game states that can be used by the state machine."]]});

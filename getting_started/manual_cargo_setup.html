@@ -1,0 +1,174 @@
+<!DOCTYPE HTML>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Amethyst Documentation</title>
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <base href="../">
+
+        <link rel="stylesheet" href="book.css">
+        <link href='http://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800' rel='stylesheet' type='text/css'>
+
+        <link rel="shortcut icon" href="favicon.png">
+
+        <!-- Font Awesome -->
+        <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+
+        <!-- MathJax -->
+        <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Fetch JQuery from CDN but have a local fallback -->
+        <script src="http://code.jquery.com/jquery-2.1.4.min.js"></script>
+        <script>
+            if (typeof jQuery == 'undefined') {
+                document.write(unescape("%3Cscript src='jquery.js'%3E%3C/script%3E"));
+            }
+        </script>
+    </head>
+    <body>
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme = localStorage.getItem('theme');
+            if (theme == null) { theme = 'light'; }
+            $('body').removeClass().addClass(theme);
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var sidebar = localStorage.getItem('sidebar');
+            if (sidebar === "hidden") { $("html").addClass("sidebar-hidden") }
+            else if (sidebar === "visible") { $("html").addClass("sidebar-visible") }
+        </script>
+
+        <div id="sidebar" class="sidebar">
+            <ul class="chapter"><li><a href="./intro.html"><strong>1.</strong> Introduction</a></li><li><a href="./getting_started.html"><strong>2.</strong> Getting Started</a></li><li><ul class="section"><li><a href="./getting_started/automatic_setup.html"><strong>2.1.</strong> Automatic Setup</a></li><li><a href="./getting_started/manual_cargo_setup.html" class="active"><strong>2.2.</strong> Manual Setup With Cargo</a></li><li><a href="./getting_started/hello_world.html"><strong>2.3.</strong> Hello, World!</a></li></ul></li><li><a href="./simple_application.html"><strong>3.</strong> A Simple Application</a></li><li><a href="./glossary.html"><strong>4.</strong> Glossary</a></li></ul>
+        </div>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar" class="menu-bar">
+                    <div class="left-buttons">
+                        <i id="sidebar-toggle" class="fa fa-bars"></i>
+                        <i id="theme-toggle" class="fa fa-paint-brush"></i>
+                    </div>
+
+                    <h1 class="menu-title">Amethyst Documentation</h1>
+
+                    <div class="right-buttons">
+                        <i id="print-button" class="fa fa-print" title="Print this book"></i>
+                    </div>
+                </div>
+
+                <div id="content" class="content">
+                    <h1>Manual Setup With Cargo</h1>
+<p>For those of you who prefer working with Cargo directly, like any other Rust
+project, you can. However, since this is just a &quot;Hello, World&quot; program, I would
+strongly recommend using the <a href="./getting_started/automatic_setup.html">Amethyst CLI tool</a> instead. It will save you
+a whole lot of time.</p>
+<h3>From Crates.io</h3>
+<p>Create a new Rust executable project with <code>cargo new --bin hello_world</code> and add
+the following lines to your &quot;Cargo.toml&quot;:</p>
+<pre><code class="language-toml">[dependencies]
+amethyst = &quot;*&quot;
+</code></pre>
+<h3>From Git</h3>
+<p>If you don't want to get Amethyst from Crates.io, you can clone the entire SDK
+from the Git repository. Once you're done, create a new Cargo project and <code>cd</code>
+into it.</p>
+<pre><code>$ git clone https://github.com/ebkalderon/amethyst.git
+$ cargo new --bin hello_world
+$ cd hello_world
+</code></pre>
+<p>In your &quot;Cargo.toml&quot; manifest, add the local <code>amethyst</code> crate and its sub-crates
+as dependencies:</p>
+<pre><code class="language-toml">[dependencies.amethyst]
+path = &quot;../path/to/amethyst/&quot;
+
+[dependencies.amethyst_engine]
+path = &quot;../path/to/amethyst/src/engine/&quot;
+
+[dependencies.amethyst_renderer]
+path = &quot;../path/to/amethyst/src/renderer/&quot;
+</code></pre>
+<h2>Resources Folder</h2>
+<p>Every Amethyst game project must have a top-level folder called &quot;resources&quot;.
+This is where your game assets are stored. In your project's root folder, create
+the following folder structure:</p>
+<ul>
+<li><strong>resources</strong>/
+<ul>
+<li><strong>entities</strong>/</li>
+<li><strong>prefabs</strong>/</li>
+<li>config.yml</li>
+<li>input.yml</li>
+</ul>
+</li>
+</ul>
+<p>And in the &quot;config.yml&quot; file, copy and paste this YAML configuration:</p>
+<pre><code class="language-yaml">---
+logging:
+    file_path: &quot;hello_world.log&quot;
+    output_verbosity: medium
+    logging_verbosity: debug 
+
+display:
+    brightness: 1.0
+    fullscreen: false
+    resolution: [1024, 768]
+</code></pre>
+<p>The &quot;input.yml&quot; file, which normally holds key binding data, can be left blank
+since this is a simple application with no user interaction.</p>
+<h2>All Set!</h2>
+<p>Whew, we're done! Let's move on and write our first
+<a href="./getting_started/hello_world.html">&quot;Hello, World&quot; program</a>.</p>
+
+                </div>
+
+                <!-- Mobile navigation buttons -->
+                
+                    <a href="./getting_started/automatic_setup.html" class="mobile-nav-chapters previous">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                
+
+                
+                    <a href="./getting_started/hello_world.html" class="mobile-nav-chapters next">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+                
+
+            </div>
+
+            
+                <a href="./getting_started/automatic_setup.html" class="nav-chapters previous" title="You can navigate through the chapters using the arrow keys">
+                    <i class="fa fa-angle-left"></i>
+                </a>
+            
+
+            
+                <a href="./getting_started/hello_world.html" class="nav-chapters next" title="You can navigate through the chapters using the arrow keys">
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            
+
+        </div>
+
+
+        <!-- Local fallback for Font Awesome -->
+        <script>
+            if ($(".fa").css("font-family") !== "FontAwesome") {
+                $('<link rel="stylesheet" type="text/css" href="_FontAwesome/css/font-awesome.css">').prependTo('head');
+            }
+        </script>
+
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+    </body>
+</html>

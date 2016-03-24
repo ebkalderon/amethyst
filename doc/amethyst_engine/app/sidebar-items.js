@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Application","User-friendly facade for building games. Manages main loop."]]});

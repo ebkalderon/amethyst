@@ -1,0 +1,149 @@
+<!DOCTYPE HTML>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Amethyst Documentation</title>
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <base href="">
+
+        <link rel="stylesheet" href="book.css">
+        <link href='http://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800' rel='stylesheet' type='text/css'>
+
+        <link rel="shortcut icon" href="favicon.png">
+
+        <!-- Font Awesome -->
+        <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+
+        <!-- MathJax -->
+        <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Fetch JQuery from CDN but have a local fallback -->
+        <script src="http://code.jquery.com/jquery-2.1.4.min.js"></script>
+        <script>
+            if (typeof jQuery == 'undefined') {
+                document.write(unescape("%3Cscript src='jquery.js'%3E%3C/script%3E"));
+            }
+        </script>
+    </head>
+    <body>
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme = localStorage.getItem('theme');
+            if (theme == null) { theme = 'light'; }
+            $('body').removeClass().addClass(theme);
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var sidebar = localStorage.getItem('sidebar');
+            if (sidebar === "hidden") { $("html").addClass("sidebar-hidden") }
+            else if (sidebar === "visible") { $("html").addClass("sidebar-visible") }
+        </script>
+
+        <div id="sidebar" class="sidebar">
+            <ul class="chapter"><li><a href="./intro.html"><strong>1.</strong> Introduction</a></li><li><a href="./getting_started.html" class="active"><strong>2.</strong> Getting Started</a></li><li><ul class="section"><li><a href="./getting_started/automatic_setup.html"><strong>2.1.</strong> Automatic Setup</a></li><li><a href="./getting_started/manual_cargo_setup.html"><strong>2.2.</strong> Manual Setup With Cargo</a></li><li><a href="./getting_started/hello_world.html"><strong>2.3.</strong> Hello, World!</a></li></ul></li><li><a href="./simple_application.html"><strong>3.</strong> A Simple Application</a></li><li><a href="./glossary.html"><strong>4.</strong> Glossary</a></li></ul>
+        </div>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar" class="menu-bar">
+                    <div class="left-buttons">
+                        <i id="sidebar-toggle" class="fa fa-bars"></i>
+                        <i id="theme-toggle" class="fa fa-paint-brush"></i>
+                    </div>
+
+                    <h1 class="menu-title">Amethyst Documentation</h1>
+
+                    <div class="right-buttons">
+                        <i id="print-button" class="fa fa-print" title="Print this book"></i>
+                    </div>
+                </div>
+
+                <div id="content" class="content">
+                    <h1>Getting Started</h1>
+<p>These instructions will help you set up a working Amethyst game development
+environment. Then we'll test this environment by compiling a simple &quot;Hello,
+World&quot; application.</p>
+<p>Amethyst should compile hassle-free on any platform properly supported by the
+Rust compiler. Here are the system requirements (they're pretty modest):</p>
+<ul>
+<li>Minimum:
+<ul>
+<li>CPU: 1GHz, the more cores the better</li>
+<li>RAM: 512 MiB</li>
+<li>HDD: 17 MiB free disk space</li>
+<li>OS: Windows Vista and newer, Linux, BSD, Mac OS X</li>
+<li>Rust: Nightly (1.6.0 or newer)</li>
+</ul>
+</li>
+<li>Renderer Backends:
+<ul>
+<li>OpenGL 4.0 or newer</li>
+</ul>
+</li>
+</ul>
+<h2>Setting Up</h2>
+<blockquote>
+<p>Note: This guide assumes you have nightly Rust and Cargo installed, and also
+have a working Internet connection. Please take care of these prerequisites
+first before proceeding.</p>
+</blockquote>
+<p>There are two ways to get started working with Amethyst:</p>
+<ol>
+<li><a href="./getting_started/automatic_setup.html">Use the Amethyst CLI tool to generate a new game project</a>.</li>
+<li><a href="./getting_started/manual_cargo_setup.html">Create the Cargo crate and the &quot;resources&quot; folder structure yourself</a>.</li>
+</ol>
+<p>Since we're just getting started, it's fastest and highly recommended to use
+<a href="https://github.com/amethyst/tools/tree/master/src/cli">Amethyst CLI</a>, which is included in the <a href="https://github.com/amethyst/tools">amethyst_tools</a> crate. If
+you're of the intrepid type, you may go the vanilla Cargo route if you wish.</p>
+
+                </div>
+
+                <!-- Mobile navigation buttons -->
+                
+                    <a href="./intro.html" class="mobile-nav-chapters previous">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                
+
+                
+                    <a href="./getting_started/automatic_setup.html" class="mobile-nav-chapters next">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+                
+
+            </div>
+
+            
+                <a href="./intro.html" class="nav-chapters previous" title="You can navigate through the chapters using the arrow keys">
+                    <i class="fa fa-angle-left"></i>
+                </a>
+            
+
+            
+                <a href="./getting_started/automatic_setup.html" class="nav-chapters next" title="You can navigate through the chapters using the arrow keys">
+                    <i class="fa fa-angle-right"></i>
+                </a>
+            
+
+        </div>
+
+
+        <!-- Local fallback for Font Awesome -->
+        <script>
+            if ($(".fa").css("font-family") !== "FontAwesome") {
+                $('<link rel="stylesheet" type="text/css" href="_FontAwesome/css/font-awesome.css">').prependTo('head');
+            }
+        </script>
+
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+    </body>
+</html>

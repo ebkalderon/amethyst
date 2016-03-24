@@ -1,0 +1,415 @@
+<!DOCTYPE HTML>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Amethyst Documentation</title>
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <base href="">
+
+        <link rel="stylesheet" href="book.css">
+        <link href='http://fonts.googleapis.com/css?family=Open+Sans:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800' rel='stylesheet' type='text/css'>
+
+        <link rel="shortcut icon" href="favicon.png">
+
+        <!-- Font Awesome -->
+        <link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+
+        <link rel="stylesheet" href="highlight.css">
+        <link rel="stylesheet" href="tomorrow-night.css">
+
+        <!-- MathJax -->
+        <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+
+        <!-- Fetch JQuery from CDN but have a local fallback -->
+        <script src="http://code.jquery.com/jquery-2.1.4.min.js"></script>
+        <script>
+            if (typeof jQuery == 'undefined') {
+                document.write(unescape("%3Cscript src='jquery.js'%3E%3C/script%3E"));
+            }
+        </script>
+    </head>
+    <body>
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme = localStorage.getItem('theme');
+            if (theme == null) { theme = 'light'; }
+            $('body').removeClass().addClass(theme);
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var sidebar = localStorage.getItem('sidebar');
+            if (sidebar === "hidden") { $("html").addClass("sidebar-hidden") }
+            else if (sidebar === "visible") { $("html").addClass("sidebar-visible") }
+        </script>
+
+        <div id="sidebar" class="sidebar">
+            <ul class="chapter"><li><a href="./intro.html"><strong>1.</strong> Introduction</a></li><li><a href="./getting_started.html"><strong>2.</strong> Getting Started</a></li><li><ul class="section"><li><a href="./getting_started/automatic_setup.html"><strong>2.1.</strong> Automatic Setup</a></li><li><a href="./getting_started/manual_cargo_setup.html"><strong>2.2.</strong> Manual Setup With Cargo</a></li><li><a href="./getting_started/hello_world.html"><strong>2.3.</strong> Hello, World!</a></li></ul></li><li><a href="./simple_application.html"><strong>3.</strong> A Simple Application</a></li><li><a href="./glossary.html"><strong>4.</strong> Glossary</a></li></ul>
+        </div>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar" class="menu-bar">
+                    <div class="left-buttons">
+                        <i id="sidebar-toggle" class="fa fa-bars"></i>
+                        <i id="theme-toggle" class="fa fa-paint-brush"></i>
+                    </div>
+
+                    <h1 class="menu-title">Amethyst Documentation</h1>
+
+                    <div class="right-buttons">
+                        <i id="print-button" class="fa fa-print" title="Print this book"></i>
+                    </div>
+                </div>
+
+                <div id="content" class="content">
+                    <p><img src="./images/amethyst_thumb.png" alt="Logo" width="96px" style="float:left;margin-right:15px"/></p>
+<h1>The Amethyst Engine</h1>
+<blockquote>
+<p>Note: This project is a <em>work in progress</em> and is very incomplete. Pardon the
+dust!</p>
+</blockquote>
+<p>Howdy! This book will teach you everything you need to know about building video
+games and interactive simulations with the Amethyst game engine. This engine is
+written entirely in <a href="https://www.rust-lang.org/">Rust</a>, a safe and fast systems programming language,
+and sports a clean and modern design. More correctly, though, Amethyst is
+actually a suite of separate libraries and tools that collectively make up a
+game engine.</p>
+<p>Amethyst is free and open source software, distributed under the
+<a href="https://github.com/amethyst/amethyst/blob/master/COPYING">MIT License</a>. This means that the engine is given to you at no cost and its
+source code is completely yours to tinker with. The code is available on
+<a href="https://github.com/amethyst/amethyst">GitHub</a>. Contributions and feature requests are welcome!</p>
+<p>This book is split into seven sections. This page is the first. The others are:</p>
+<ul>
+<li><a href="./getting_started.html">Getting Started</a> – Prepare your computer for Amethyst development.</li>
+<li><a href="./simple_application.html">A Simple Application</a> – Build a basic pong game in Rust.</li>
+<li>Effective Amethyst – Learn how to write complex games and applications.</li>
+<li>Scripting – Jump into scripted development with <a href="https://www.ruby-lang.org/">Ruby</a>.</li>
+<li><a href="./glossary.html">Glossary</a> - Defines special terms used throughout the book.</li>
+<li>Bibliography – Read the works that influenced the design.</li>
+</ul>
+<p>Read the crate-level <a href="https://www.amethyst.rs/doc/amethyst/">API documentation</a> for more details.</p>
+<h2>Why are you building this?</h2>
+<p>I've worked with a few game engines over the years, namely <a href="http://unity3d.com/">Unity</a> and the
+<a href="https://www.unrealengine.com/">Unreal Development Kit</a>, and both are pretty solid solutions if you want to
+build a quality game. But each have their own pros and cons that you have to
+weigh before using them, especially in regards to performance and scalability.</p>
+<p>One engine I've always admired as a programmer but never had a chance to play
+with is the <a href="http://twvideo01.ubm-us.net/o1/vault/gdc2012/slides/Programming%20Track/Persson_Tobias_Flexible_Rendering.pdf.pdf">Bitsquid Engine</a> (now called <a href="http://stingrayengine.com/">Autodesk Stingray</a>). It's
+fast, forward-thinking, highly parallel, and data-driven. It seems like a
+wonderful platform for rapid prototyping. I've wanted to play around with a
+Bitsquid-like engine for a while, but I couldn't find any open-source
+equivalents out there. Most of those I did find stuck to outdated design
+patterns and lacked the multi-core scalability I was looking for. So I set out
+to write my own.</p>
+<p>In short, I am writing Amethyst to scratch three of my own itches:</p>
+<ol>
+<li>Teach myself Rust, game development, and computer graphics in their purest
+form, rather than through the lens of a particular game engine.</li>
+<li>Write a modular, parallel, data-oriented, and data-driven engine suited for
+rapid prototyping that demands (a little) less boilerplate from the user.</li>
+<li>Build a toolset that splits up the traditional &quot;mega-editor&quot; into several
+<a href="https://github.com/ebkalderon/amethyst_tools">small but well-integrated tools</a>, adhering to the <a href="https://en.wikipedia.org/wiki/Unix_philosophy">Unix philosophy</a>.</li>
+</ol>
+<h2>Contributing</h2>
+<p>The Markdown source files from which this book is generated can be found
+<a href="https://github.com/amethyst/amethyst/tree/master/book/src">on GitHub</a>. Pull requests are welcome!</p>
+<h1>Getting Started</h1>
+<p>These instructions will help you set up a working Amethyst game development
+environment. Then we'll test this environment by compiling a simple &quot;Hello,
+World&quot; application.</p>
+<p>Amethyst should compile hassle-free on any platform properly supported by the
+Rust compiler. Here are the system requirements (they're pretty modest):</p>
+<ul>
+<li>Minimum:
+<ul>
+<li>CPU: 1GHz, the more cores the better</li>
+<li>RAM: 512 MiB</li>
+<li>HDD: 17 MiB free disk space</li>
+<li>OS: Windows Vista and newer, Linux, BSD, Mac OS X</li>
+<li>Rust: Nightly (1.6.0 or newer)</li>
+</ul>
+</li>
+<li>Renderer Backends:
+<ul>
+<li>OpenGL 4.0 or newer</li>
+</ul>
+</li>
+</ul>
+<h2>Setting Up</h2>
+<blockquote>
+<p>Note: This guide assumes you have nightly Rust and Cargo installed, and also
+have a working Internet connection. Please take care of these prerequisites
+first before proceeding.</p>
+</blockquote>
+<p>There are two ways to get started working with Amethyst:</p>
+<ol>
+<li><a href="./getting_started/automatic_setup.html">Use the Amethyst CLI tool to generate a new game project</a>.</li>
+<li><a href="./getting_started/manual_cargo_setup.html">Create the Cargo crate and the &quot;resources&quot; folder structure yourself</a>.</li>
+</ol>
+<p>Since we're just getting started, it's fastest and highly recommended to use
+<a href="https://github.com/amethyst/tools/tree/master/src/cli">Amethyst CLI</a>, which is included in the <a href="https://github.com/amethyst/tools">amethyst_tools</a> crate. If
+you're of the intrepid type, you may go the vanilla Cargo route if you wish.</p>
+<h1>Automatic Setup Using The CLI Tool</h1>
+<p>An easy way to set up Amethyst and manage your project is with the
+<a href="https://github.com/amethyst/tools">amethyst_tools</a> crate. If you want to set up a game project in Cargo by
+hand, follow along with <a href="./getting_started/manual_cargo_setup.html">the next section</a> instead.</p>
+<p>To install the toolchain and generate a new project with the CLI tool, follow
+along in your terminal:</p>
+<pre><code>$ cargo install amethyst_tools
+$ amethyst new hello_world
+</code></pre>
+<p>That's it! You should now have a customized Cargo project set up in a directory
+called &quot;hello_world&quot;. <code>cd</code> into it, and you should find the following file
+structure:</p>
+<ul>
+<li><strong>hello_world</strong>/
+<ul>
+<li><strong>resources</strong>/
+<ul>
+<li>Lots of junk...</li>
+</ul>
+</li>
+<li><strong>src</strong>/
+<ul>
+<li>main.rs</li>
+</ul>
+</li>
+<li>Cargo.toml</li>
+</ul>
+</li>
+</ul>
+<p>You're all set! Skip forward to <a href="./getting_started/hello_world.html">section 2.3</a> to see your setup in action.</p>
+<h1>Manual Setup With Cargo</h1>
+<p>For those of you who prefer working with Cargo directly, like any other Rust
+project, you can. However, since this is just a &quot;Hello, World&quot; program, I would
+strongly recommend using the <a href="./getting_started/automatic_setup.html">Amethyst CLI tool</a> instead. It will save you
+a whole lot of time.</p>
+<h3>From Crates.io</h3>
+<p>Create a new Rust executable project with <code>cargo new --bin hello_world</code> and add
+the following lines to your &quot;Cargo.toml&quot;:</p>
+<pre><code class="language-toml">[dependencies]
+amethyst = &quot;*&quot;
+</code></pre>
+<h3>From Git</h3>
+<p>If you don't want to get Amethyst from Crates.io, you can clone the entire SDK
+from the Git repository. Once you're done, create a new Cargo project and <code>cd</code>
+into it.</p>
+<pre><code>$ git clone https://github.com/ebkalderon/amethyst.git
+$ cargo new --bin hello_world
+$ cd hello_world
+</code></pre>
+<p>In your &quot;Cargo.toml&quot; manifest, add the local <code>amethyst</code> crate and its sub-crates
+as dependencies:</p>
+<pre><code class="language-toml">[dependencies.amethyst]
+path = &quot;../path/to/amethyst/&quot;
+
+[dependencies.amethyst_engine]
+path = &quot;../path/to/amethyst/src/engine/&quot;
+
+[dependencies.amethyst_renderer]
+path = &quot;../path/to/amethyst/src/renderer/&quot;
+</code></pre>
+<h2>Resources Folder</h2>
+<p>Every Amethyst game project must have a top-level folder called &quot;resources&quot;.
+This is where your game assets are stored. In your project's root folder, create
+the following folder structure:</p>
+<ul>
+<li><strong>resources</strong>/
+<ul>
+<li><strong>entities</strong>/</li>
+<li><strong>prefabs</strong>/</li>
+<li>config.yml</li>
+<li>input.yml</li>
+</ul>
+</li>
+</ul>
+<p>And in the &quot;config.yml&quot; file, copy and paste this YAML configuration:</p>
+<pre><code class="language-yaml">---
+logging:
+    file_path: &quot;hello_world.log&quot;
+    output_verbosity: medium
+    logging_verbosity: debug 
+
+display:
+    brightness: 1.0
+    fullscreen: false
+    resolution: [1024, 768]
+</code></pre>
+<p>The &quot;input.yml&quot; file, which normally holds key binding data, can be left blank
+since this is a simple application with no user interaction.</p>
+<h2>All Set!</h2>
+<p>Whew, we're done! Let's move on and write our first
+<a href="./getting_started/hello_world.html">&quot;Hello, World&quot; program</a>.</p>
+<h1>Hello, World!</h1>
+<p>Now, we will commence our journey in writing Amethyst applications with the
+obligatory &quot;Hello, World&quot; program! In your crate's &quot;main.rs&quot; file, type out or
+copy and paste the following code:</p>
+<pre><code class="language-rust">extern crate amethyst;
+
+use amethyst::engine::{Application, Duration, State, Trans};
+
+struct HelloWorld;
+
+impl State for HelloWorld {
+    fn on_start(&amp;mut self) {
+        println!(&quot;Game started!&quot;);
+    }
+
+    fn update(&amp;mut self, _delta: Duration) -&gt; Trans {
+        println!(&quot;Hello from Amethyst!&quot;);
+        Trans::Quit
+    }
+
+    fn on_stop(&amp;mut self) {
+        println!(&quot;Game stopped!&quot;);
+    }
+}
+
+fn main() {
+    let mut game = Application::new(HelloWorld);
+    game.run();
+}
+</code></pre>
+<p>Then, compile and run the code with <code>cargo run</code>, or <code>amethyst run</code> if you
+have the <a href="./getting_started/automatic_setup.html">CLI tool installed</a>.</p>
+<p>You should see the following output print to your terminal:</p>
+<pre><code>Game started!
+Hello from Amethyst!
+Game stopped!
+</code></pre>
+<p>If instead you see <code>error: use of unstable library feature</code> then make sure
+you're using the <a href="https://doc.rust-lang.org/book/release-channels.html">nightly release</a> of Rust. You can use <a href="https://github.com/brson/multirust">multirust</a> to
+install stable and nightly Rust side-by-side.</p>
+<p>Congratulations! You have successfully written your first Amethyst application.</p>
+<h2>What did I just do?</h2>
+<p>Whoa, that went by too fast. Let's slow down a bit and break down this example
+program into bite-sized chunks. What we did is create a basic Rust crate that
+hooks into the Amethyst game engine, prints some text, and then signals to the
+engine to quit.</p>
+<p>Amethyst operates like a state machine. Each Amethyst application has one or
+more states, each of which roughly correspond to a &quot;screen&quot; seen in a game (e.g.
+main menu, loading screen, in-game, inventory menu, credits). You control when
+Amethyst should switch states and what happens every time you do. In our &quot;Hello,
+World&quot; example, the logic flows like this:</p>
+<ol>
+<li>Initialize the program.</li>
+<li>Create engine with <code>HelloWorld</code> as the initial state.</li>
+<li>Start the engine.
+<ol>
+<li>Enter the <code>HelloWorld</code> state.</li>
+<li>On the first frame, print &quot;Hello from Amethyst!&quot;, and signal to the engine
+to quit.</li>
+<li>Leave the <code>HelloWorld</code> State.</li>
+</ol>
+</li>
+<li>Shut the engine down.</li>
+<li>Quit the program.</li>
+</ol>
+<h2>Can I make a game yet?</h2>
+<p>This program isn't very useful on its own, but if everything compiles correctly,
+then your environment is set up correctly and you can start working on the fun
+stuff! Follow along in <a href="./simple_application.html">the next section</a> to see how I implement a simple
+Pong clone in Amethyst.</p>
+<h1>Writing a Simple Application</h1>
+<p>In this section, I'll walk you through implementing a simple 3D Pong clone using
+Amethyst. You will learn a bit more about game states and also basic
+entity-component-system game design and we will apply those concepts and build
+a little toy game. Hopefully by the end of this section, you will have gotten
+the hang of working with Amethyst.</p>
+<h1>Glossary</h1>
+<h2>Data-driven design</h2>
+<p>Describes a program that has its logic defined largely in data rather than in
+compiled code. Ideally, this would permit the user to edit their code and
+resources using offline tools and have the program hot-reload the changes at
+run-time for instant feedback without the need for recompilation. The bare
+minimum qualification for a data-driven program is the ability to read external
+content (text files, scripts, byte streams) and mutate its behavior accordingly.</p>
+<h2>Data-oriented programming</h2>
+<p>Not to be confused with data-driven design, data-oriented programming is a
+programming paradigm, like object-oriented programming (OOP) or procedural
+programming. Where OOP focuses on modeling a problem in terms of interacting
+objects, and procedural programming tries to model a problem in terms of
+sequential or recursive steps or procedures, data-oriented programming shifts
+the focus towards the data being operated on: the data type, its memory layout,
+how it will be processed. Software written in a data-oriented manner tends
+toward high-throughput pipelining, modularity, separation of concerns, and
+massive parallelism. If architected correctly, data-oriented software can be
+very cache-friendly and easy to scale on systems with multiple cores.</p>
+<blockquote>
+<p>Note: Data-oriented programming does not necessarily imply that a program is
+data-driven. Data-driven behavior can be implemented with any programming
+approach you like.</p>
+</blockquote>
+<h2>Entity-component-system (ECS) model</h2>
+<p>Describes a game programming design pattern invented as a reaction to the
+deep-rooted problems with using <em>inheritance</em> (is-a relationship) to represent
+game objects, including the <a href="https://en.wikipedia.org/wiki/Multiple_inheritance#The_diamond_problem">deadly diamond of death</a> and <a href="https://en.wikipedia.org/wiki/God_object">god objects</a>.
+The inheritance-based approach was especially common in the game industry during
+the 1990's and early 2000's.</p>
+<p>This alternative model makes use of <em>composition</em> (has-a relationship) instead
+of inheritance to represent objects in the game world, flattening the hierarchy
+and eliminating the problems above, while increasing flexibility. The holistic
+ECS approach is broken into three key pieces:</p>
+<ol>
+<li><em>Entity</em>: Represents a single object in the game world. Has no functionality
+on its own. The world owns a collection of entities (either in a flat list or
+a hierarchy). Each entity has a unique identifier or name, for the sake of
+ease of use.</li>
+<li><em>Component</em>: A plain-old-data structure that describes a certain trait an
+entity can have. Can be &quot;attached&quot; to entities to grant them certain
+abilities, e.g. a <code>Light</code> component contains parameters to make an entity
+glow, or a <code>Collidable</code> component can grant an entity collision detection
+properties. These components <em>do not</em> have any logic. They contain only data.</li>
+<li><em>System</em> (or perhaps more aptly, a <em>Processor</em>): This is where the magic
+happens! Processors are centralized game engine subsystems that perform a
+specific function, such as rendering, physics, audio, etc. Every frame, they
+process each entity in the game world looking for components that are
+relevant to them, reading their contents, and performing actions. For
+example, a <code>Rendering</code> processor could search for all entities that have
+<code>Light</code>, <code>Mesh</code>, or <code>Emitter</code> components and draw them to the screen.</li>
+</ol>
+<p>This approach could potentially be stretched to fit the model-view-controller
+(MVC) paradigm popular in GUI and Web development circles: entities and
+components together represent the model, and processors represent either views
+(<code>Rendering</code>, <code>Audio</code>) or controllers (<code>Input</code>, <code>AI</code>, <code>Physics</code>), depending on
+their purpose.</p>
+<p>Another great advantage of the ECS model is the ability to rapidly prototype
+a game simply by describing objects' characteristics in terms of creating
+entities and attaching components to them, with very little game code involved.
+And all of this data can be easily serialized or de-serialized into a
+human-friendly plain text format like <a href="http://www.yaml.org/">YAML</a> (what we use) or <a href="http://www.json.org/">JSON</a>.</p>
+<p>For more detailed explanations of entity-component-system designs, please
+<a href="https://www.reddit.com/r/rust/comments/43p2fq/this_week_in_amethyst_3/czkc4hj">see this great post on Reddit</a> and <a href="http://gamedev.stackexchange.com/questions/31473/what-is-the-role-of-systems-in-a-component-based-entity-architecture/31491#31491">this Stack Overflow answer</a>.</p>
+
+                </div>
+
+                <!-- Mobile navigation buttons -->
+                
+
+                
+
+            </div>
+
+            
+
+            
+
+        </div>
+
+
+        <!-- Local fallback for Font Awesome -->
+        <script>
+            if ($(".fa").css("font-family") !== "FontAwesome") {
+                $('<link rel="stylesheet" type="text/css" href="_FontAwesome/css/font-awesome.css">').prependTo('head');
+            }
+        </script>
+
+        <script src="highlight.js"></script>
+        <script src="book.js"></script>
+    </body>
+</html>
