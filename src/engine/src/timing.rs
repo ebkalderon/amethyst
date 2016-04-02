@@ -1,8 +1,6 @@
 //! Utilities for working with time.
 
-extern crate time;
-
-pub use self::time::{Duration, SteadyTime};
+pub use time::{Duration, SteadyTime};
 
 /// Useful utility for accurately measuring elapsed time.
 pub struct Stopwatch {

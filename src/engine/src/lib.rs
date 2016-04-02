@@ -4,6 +4,9 @@
 
 //! Game engine sitting atop the core libraries.
 
+extern crate time;
+extern crate walkdir;
+
 mod app;
 mod res;
 mod state;
