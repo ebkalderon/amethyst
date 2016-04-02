@@ -1,6 +1,6 @@
 //! Resource management.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use walkdir::WalkDir;
 
 /// Logical representation of the game's resource files.
