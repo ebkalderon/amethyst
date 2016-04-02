@@ -18,3 +18,4 @@ path = "src/lib.rs"
 [dependencies]
 time = "0.1"
 walkdir = "0.1"
+yaml-rust = "0.3"

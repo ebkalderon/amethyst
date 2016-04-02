@@ -6,6 +6,7 @@
 
 extern crate time;
 extern crate walkdir;
+extern crate yaml_rust;
 
 mod app;
 mod res;

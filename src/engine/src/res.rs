@@ -6,7 +6,6 @@ use walkdir::WalkDir;
 /// Logical representation of the game's resource files.
 pub struct Resources {
     /// Path to local `resources` folder.
-    ///
     /// If `Some`, load from disk relative to that path. If `None`, load from
     /// `resources.zip` file found relative to `std::env::current_dir()`.
     root: Option<PathBuf>,
