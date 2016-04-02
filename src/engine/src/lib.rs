@@ -5,6 +5,7 @@
 //! Game engine sitting atop the core libraries.
 
 mod app;
+mod res;
 mod state;
 mod timing;
 
