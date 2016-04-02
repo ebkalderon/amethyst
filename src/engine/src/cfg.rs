@@ -39,6 +39,7 @@ struct Input;
 /// Format: (log file path, stdout verbosity, log file verbosity)
 struct Logging(String, Verbosity, Verbosity);
 
+/// A discrete logging verbosity level.
 enum Verbosity {
     None,
     Error,

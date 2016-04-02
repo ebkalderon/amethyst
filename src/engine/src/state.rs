@@ -1,6 +1,6 @@
 //! Utilities for game state management.
 
-use super::timing::Duration;
+use timing::Duration;
 
 /// Types of state transitions.
 pub enum Trans {

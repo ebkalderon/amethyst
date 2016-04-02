@@ -1,7 +1,7 @@
 //! The core engine framework.
 
-use super::state::{State, StateMachine};
-use super::timing::{Duration, SteadyTime, Stopwatch};
+use state::{State, StateMachine};
+use timing::{Duration, SteadyTime, Stopwatch};
 
 /// User-friendly facade for building games. Manages main loop.
 pub struct Application {
