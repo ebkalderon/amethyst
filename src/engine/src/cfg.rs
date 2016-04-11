@@ -1,6 +1,7 @@
 //! Configuration parsing and storage.
 
 use std::path::Path;
+use super::input::InputBinds;
 
 /// Stores engine configuration data.
 pub struct Configs {
@@ -16,10 +17,10 @@ impl Configs {
     /// Loads configuration data from given YAML strings.
     pub fn parse() -> Result<Configs, &'static str> {
         // Parse the strings, build config fields.
-        
+
         let cfg = Configs {
             display: Display(1.0, false, [1024, 768], "Amethyst".to_string()),
-            input: Input,
+            input: Input(InputBinds::new()),
             logging: Logging("log.log".to_string(), Verbosity::Debug, Verbosity::Debug),
         };
 
@@ -32,8 +33,7 @@ impl Configs {
 struct Display(f32, bool, [i32; 2], String);
 
 /// Input configuration data.
-/// TODO: Missing fields; no key/gamepad/touch input representation defined yet.
-struct Input;
+struct Input(InputBinds);
 
 /// Logging configuration data.
 /// Format: (log file path, stdout verbosity, log file verbosity)

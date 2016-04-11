@@ -15,6 +15,9 @@ license = "MIT"
 name = "amethyst_engine"
 path = "src/lib.rs"
 
+[features]
+input = []
+
 [dependencies]
 time = "0.1"
 walkdir = "0.1"
