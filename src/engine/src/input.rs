@@ -1,7 +1,16 @@
 #[derive(Debug)]
+struct Key {
+    key: String,
+    // Modifiers
+    shift: bool,
+    control: bool,
+    alt: bool,
+}
+
+#[derive(Debug)]
 struct KeyboardBinding {
-    main: String,
-    alt: Option<String>,
+    main: Key,
+    alt: Option<Key>,
 }
 
 #[derive(Debug)]
