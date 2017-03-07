@@ -1,11 +1,9 @@
 //! World resource that handles all user input.
 
+use engine::{ElementState, WindowEvent, Event, VirtualKeyCode};
 use fnv::FnvHashMap as HashMap;
-
 use std::collections::hash_map::{Entry, Keys};
 use std::iter::Iterator;
-
-use engine::{ElementState, WindowEvent, Event, VirtualKeyCode};
 
 /// Indicates whether a given `VirtualKeyCode` has been queried or not.
 #[derive(Eq, PartialEq)]

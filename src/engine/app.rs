@@ -1,13 +1,5 @@
 //! The core engine framework.
 
-use std::sync::Arc;
-use std::time::{Duration, Instant};
-
-use threadpool::ThreadPool;
-#[cfg(feature="profiler")]
-use thread_profiler::{register_thread_with_profiler, write_profile};
-use num_cpus;
-
 use asset_manager::AssetManager;
 use ecs::{Component, Planner, Priority, System, World};
 use ecs::components::{LocalTransform, Transform, Child, Init, Renderable};
@@ -15,17 +7,18 @@ use ecs::resources::Time;
 use ecs::systems::TransformSystem;
 use engine::state::{State, StateMachine};
 use engine::timing::Stopwatch;
-use gfx_device;
-use gfx_device::{DisplayConfig, GfxDevice, gfx_types};
-use renderer::{AmbientLight, DirectionalLight, Pipeline, PointLight, target};
+use renderer::{AmbientLight, DirectionalLight, Pipeline, PointLight, Target};
+use std::sync::Arc;
+use std::time::{Duration, Instant};
+use threadpool::ThreadPool;
+
+#[cfg(feature="profiler")]
+use thread_profiler::{register_thread_with_profiler, write_profile};
 
 /// User-friendly facade for building games. Manages main loop.
 pub struct Application {
     // Graphics and asset management structs.
-    // TODO: Refactor so `pipe` and `gfx_device` are moved into the renderer.
     assets: AssetManager,
-    gfx_device: GfxDevice,
-    pipe: Pipeline,
     planner: Planner<()>,
 
     // State management and game loop timing structs.
@@ -39,7 +32,7 @@ pub struct Application {
 impl Application {
     /// Creates a new Application with the given initial game state, planner,
     /// and display configuration.
-    pub fn new<T>(initial_state: T, mut planner: Planner<()>, cfg: DisplayConfig) -> Application
+    pub fn new<T>(initial_state: T, mut planner: Planner<()>) -> Application
         where T: State + 'static
     {
         use ecs::resources::{Camera, Projection, ScreenDimensions};
@@ -61,7 +54,7 @@ impl Application {
         pipe.targets.insert("gbuffer".into(), Box::new(geom_buf));
 
         let mut assets = AssetManager::new();
-        assets.add_loader::<gfx_types::Factory>(factory);
+        // assets.add_loader::<gfx_types::Factory>(factory);
 
         let trans_sys = TransformSystem::new();
         planner.add_system::<TransformSystem>(trans_sys, "transform_system", 0);
@@ -73,23 +66,8 @@ impl Application {
                 fixed_step: Duration::new(0, 16666666),
                 last_fixed_update: Instant::now(),
             };
-            if let Some((w, h)) = device.get_dimensions() {
-                let dim = ScreenDimensions::new(w, h);
-                let proj = Projection::Perspective {
-                    fov: 90.0,
-                    aspect_ratio: dim.aspect_ratio,
-                    near: 0.1,
-                    far: 100.0,
-                };
-                let eye = [0.0, 0.0, 0.0];
-                let target = [1.0, 0.0, 0.0];
-                let up = [0.0, 1.0, 0.0];
-                let camera = Camera::new(proj, eye, target, up);
-                world.add_resource::<ScreenDimensions>(dim);
-                world.add_resource::<Camera>(camera);
-            }
 
-            world.add_resource::<AmbientLight>(AmbientLight::default());
+            // world.add_resource::<AmbientLight>(AmbientLight::default());
             world.add_resource::<Time>(time);
             world.register::<Child>();
             world.register::<DirectionalLight>();
@@ -103,8 +81,6 @@ impl Application {
         Application {
             assets: assets,
             states: StateMachine::new(initial_state),
-            gfx_device: device,
-            pipe: pipe,
             planner: planner,
             timer: Stopwatch::new(),
             delta_time: Duration::new(0, 0),
@@ -114,10 +90,10 @@ impl Application {
     }
 
     /// Builds a new application using builder pattern.
-    pub fn build<T>(initial_state: T, cfg: DisplayConfig) -> ApplicationBuilder<T>
+    pub fn build<T>(initial_state: T) -> ApplicationBuilder<T>
         where T: State + 'static
     {
-        ApplicationBuilder::new(initial_state, cfg)
+        ApplicationBuilder::new(initial_state)
     }
 
     /// Starts the application and manages the game loop.
@@ -148,8 +124,7 @@ impl Application {
     fn initialize(&mut self) {
         let world = &mut self.planner.mut_world();
         let assets = &mut self.assets;
-        let pipe = &mut self.pipe;
-        self.states.start(world, assets, pipe);
+        self.states.start(world, assets);
     }
 
     /// Advances the game world by one tick.
@@ -161,14 +136,13 @@ impl Application {
             let events = self.gfx_device.poll_events();
             let world = &mut self.planner.mut_world();
             let assets = &mut self.assets;
-            let pipe = &mut self.pipe;
 
-            self.states.handle_events(events.as_ref(), world, assets, pipe);
+            self.states.handle_events(&Vec::new(), world, assets);
 
             #[cfg(feature="profiler")]
             profile_scope!("fixed_update");
             if self.last_fixed_update.elapsed() >= self.fixed_step {
-                self.states.fixed_update(world, assets, pipe);
+                self.states.fixed_update(world, assets);
                 self.last_fixed_update += self.fixed_step;
             }
 
@@ -199,9 +173,6 @@ impl Application {
                 time.fixed_step = self.fixed_step;
                 time.last_fixed_update = self.last_fixed_update;
             }
-
-            let pipe = &mut self.pipe;
-            self.gfx_device.render_world(world, pipe);
         }
     }
 
@@ -224,7 +195,6 @@ impl Application {
 pub struct ApplicationBuilder<T>
     where T: State + 'static
 {
-    config: DisplayConfig,
     initial_state: T,
     planner: Planner<()>,
 }
@@ -235,29 +205,24 @@ impl<T> ApplicationBuilder<T>
     /// Creates a new ApplicationBuilder with the given initial game state and
     /// display configuration.
     pub fn new(initial_state: T, cfg: DisplayConfig) -> ApplicationBuilder<T> {
+        use num_cpus;
         let pool = Arc::new(ThreadPool::new(num_cpus::get()));
 
         ApplicationBuilder {
-            config: cfg,
             initial_state: initial_state,
             planner: Planner::from_pool(World::new(), pool),
         }
     }
 
     /// Registers a given component type.
-    pub fn register<C>(mut self) -> ApplicationBuilder<T>
-        where C: Component
-    {
-        {
-            let world = &mut self.planner.mut_world();
-            world.register::<C>();
-        }
+    pub fn register<C: Component>(mut self) -> Self {
+        self.planner.mut_world().register::<C>();
         self
     }
 
     /// Adds a given system `pro`, assigns it the string identifier `name`,
     /// and marks it with the runtime priority `pri`.
-    pub fn with<S>(mut self, sys: S, name: &str, pri: Priority) -> ApplicationBuilder<T>
+    pub fn with<S>(mut self, sys: S, name: &str, pri: Priority) -> Self
         where S: System<()> + 'static
     {
         self.planner.add_system::<S>(sys, name, pri);
@@ -266,6 +231,6 @@ impl<T> ApplicationBuilder<T>
 
     /// Builds the Application and returns the result.
     pub fn done(self) -> Application {
-        Application::new(self.initial_state, self.planner, self.config)
+        Application::new(self.initial_state, self.planner)
     }
 }

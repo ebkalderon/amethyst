@@ -1,6 +1,6 @@
 [package]
 name = "amethyst"
-version = "0.4.2"
+version = "0.5.0"
 authors = ["Eyal Kalderon <ebkalderon@gmail.com>"]
 description = "Data-oriented game engine written in Rust"
 keywords = ["game", "engine", "sdk", "amethyst"]
@@ -11,41 +11,31 @@ homepage = "https://www.amethyst.rs/"
 repository = "https://github.com/amethyst/amethyst"
 
 readme = "README.md"
-license = "MIT/Apache-2.0"
+license = "MIT OR Apache-2.0"
 
 [badges]
-appveyor = { repository = "amethyst/amethyst" }
+appveyor = { repository = "amethyst/amethyst", branch = "develop" }
 travis-ci = { repository = "amethyst/amethyst" }
 
 [features]
-default = ["opengl"]
-opengl = []
-direct3d = []
 profiler = ["thread_profiler/thread_profiler"]
 
 [dependencies]
-amethyst_config = { path = "src/config/", version = "0.2.2" }
-amethyst_renderer = { path = "src/renderer", version = "0.4.2" }
+amethyst_config = { path = "src/config/", version = "0.2" }
+amethyst_renderer = { path = "src/renderer", version = "0.5" }
 cgmath = "0.12"
 dds-rs = "0.4"
 fnv = "1.0"
 num_cpus = "1.2"
 genmesh = "0.4"
 gfx = "0.14"
-gfx_device_gl = "0.13"
-gfx_window_glutin = "0.14"
 glutin = "0.7"
 imagefmt = "4.0"
 specs = "0.8.1"
+thread_profiler = { version = "0.1", optional = true }
 threadpool = "1.3"
 ticketed_lock = "0.1"
 wavefront_obj = "5.0"
-
-thread_profiler = { version = "0.1", optional = true }
-
-[target.'cfg(windows)'.dependencies]
-gfx_device_dx11 = "0.4"
-gfx_window_dxgi = "0.5"
 
 [[example]]
 name = "hello_world"

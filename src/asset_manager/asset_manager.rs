@@ -3,22 +3,21 @@
 
 use cgmath::{InnerSpace, Vector3};
 use dds::DDS;
+use ecs::{Allocator, Component, Entity, MaskedStorage, Storage, VecStorage, World};
+use ecs::{Allocator, Component, Entity, GatedStorage, MaskedStorage, Storage, VecStorage, World};
+use ecs::components::{Mesh, Renderable, Texture, TextureLoadData};
 use fnv::FnvHashMap as HashMap;
 use gfx::texture::{AaMode, Kind};
 use imagefmt::{ColFmt, Image, read_from};
+use renderer::vertex::PosNormTex;
+use std::{env, fs, str};
 use std::any::{Any, TypeId};
-use std::{env, fs};
 use std::io::{Cursor, Read};
 use std::ops::{Deref, DerefMut};
 use std::path::{Path, PathBuf};
-use std::str;
 use std::sync::RwLockReadGuard;
 use ticketed_lock::ReadTicket;
 use wavefront_obj::obj::{ObjSet, parse, Primitive};
-
-use ecs::{Allocator, Component, Entity, GatedStorage, MaskedStorage, Storage, VecStorage, World};
-use ecs::components::{Mesh, Renderable, Texture, TextureLoadData};
-use renderer::VertexPosNormal;
 
 type AssetTypeId = TypeId;
 type SourceTypeId = TypeId;
@@ -407,16 +406,16 @@ impl AssetLoader<Mesh> for ObjSet {
     fn from_data(assets: &mut Assets, obj_set: ObjSet) -> Option<Mesh> {
         // Takes a list of objects that contain geometries that contain shapes that contain
         // vertex/texture/normal indices into the main list of vertices, and converts to a
-        // flat vec of `VertexPosNormal` objects.
+        // flat vec of `PosNormTex` objects.
         // TODO: Doesn't differentiate between objects in a `*.obj` file, treats
         // them all as a single mesh.
-        let vertices: Vec<VertexPosNormal> = obj_set.objects
+        let vertices: Vec<PosNormTex> = obj_set.objects
             .iter()
             .flat_map(|object| {
                 object.geometry
                     .iter()
                     .flat_map(|ref geometry| {
-                        geometry.shapes.iter().flat_map(|s| -> Vec<VertexPosNormal> {
+                        geometry.shapes.iter().flat_map(|s| -> Vec<PosNormTex> {
                             let mut vtn_indices = vec![];
 
                             match s.primitive {
@@ -438,7 +437,7 @@ impl AssetLoader<Mesh> for ObjSet {
                                 .map(|&(vi, ti, ni)| {
                                     let vertex = object.vertices[vi];
 
-                                    VertexPosNormal {
+                                    PosNormTex {
                                         pos: [vertex.x as f32, vertex.y as f32, vertex.z as f32],
                                         normal: match ni {
                                             Some(i) => {
@@ -464,7 +463,7 @@ impl AssetLoader<Mesh> for ObjSet {
                                 .collect()
                         })
                     })
-                    .collect::<Vec<VertexPosNormal>>()
+                    .collect::<Vec<PosNormTex>>()
             })
             .collect();
 

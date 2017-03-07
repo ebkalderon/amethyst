@@ -35,11 +35,8 @@
 //! }
 //! ```
 
-use std::sync::RwLockReadGuard;
-
-use ticketed_lock::ReadTicket;
-
 use ecs::{World, Component, EntityBuilder, GatedStorage, Allocator, MaskedStorage, Join};
+use ticketed_lock::ReadTicket;
 
 /// Allows publishing entities
 pub struct Broadcaster {
