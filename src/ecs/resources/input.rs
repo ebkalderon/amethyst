@@ -1,11 +1,9 @@
 //! World resource that handles all user input.
 
+use engine::{ElementState, Event, MouseButton, VirtualKeyCode, WindowEvent};
 use fnv::FnvHashMap as HashMap;
-
 use std::iter::{Iterator, Chain, Map};
 use std::slice::Iter;
-
-use engine::{ElementState, WindowEvent, Event, VirtualKeyCode, MouseButton};
 
 /// A Button is any kind of digital input that the engine supports.
 #[derive(Eq, PartialEq, Debug, Copy, Clone)]
