@@ -1,27 +1,21 @@
 //! The core engine framework.
 
-use std::sync::Arc;
-use std::time::{Duration, Instant};
-
-use rayon::ThreadPool;
-#[cfg(feature="profiler")]
-use thread_profiler::{register_thread_with_profiler, write_profile};
-use num_cpus;
-
 use asset_manager::AssetManager;
 use ecs::{Component, Dispatcher, DispatcherBuilder, System, World};
-use ecs::components::{LocalTransform, Transform, Child, Init, Renderable};
+use ecs::components::{LocalTransform, Transform, Child, Init};
 use ecs::resources::Time;
 use engine::state::{State, StateMachine};
 use engine::timing::Stopwatch;
-use gfx_device;
-use gfx_device::{DisplayConfig, GfxDevice, gfx_types};
-use renderer::{AmbientLight, DirectionalLight, Pipeline, PointLight, target};
+use std::sync::Arc;
+use std::time::{Duration, Instant};
+use rayon::{Configuration, ThreadPool};
+
+#[cfg(feature="profiler")]
+use thread_profiler::{register_thread_with_profiler, write_profile};
 
 /// User-friendly facade for building games. Manages main loop.
 pub struct Application<'a, 'b> {
     // Graphics and asset management structs.
-    // TODO: Refactor so `pipe` and `gfx_device` are moved into the renderer.
     assets: AssetManager,
     gfx_device: GfxDevice,
     pipe: Pipeline,
@@ -66,7 +60,7 @@ impl<'a, 'b> Application<'a, 'b> {
         pipe.targets.insert("gbuffer".into(), Box::new(geom_buf));
 
         let mut assets = AssetManager::new();
-        assets.add_loader::<gfx_types::Factory>(factory);
+        // assets.add_loader::<gfx_types::Factory>(factory);
 
         {
             let time = Time {
@@ -74,38 +68,21 @@ impl<'a, 'b> Application<'a, 'b> {
                 fixed_step: Duration::new(0, 16666666),
                 last_fixed_update: Instant::now(),
             };
-            if let Some((w, h)) = device.get_dimensions() {
-                let dim = ScreenDimensions::new(w, h);
-                let proj = Projection::Perspective {
-                    fov: 90.0,
-                    aspect_ratio: dim.aspect_ratio,
-                    near: 0.1,
-                    far: 100.0,
-                };
-                let eye = [0.0, 0.0, 0.0];
-                let target = [1.0, 0.0, 0.0];
-                let up = [0.0, 1.0, 0.0];
-                let camera = Camera::new(proj, eye, target, up);
-                world.add_resource::<ScreenDimensions>(dim);
-                world.add_resource::<Camera>(camera);
-            }
 
-            world.add_resource::<AmbientLight>(AmbientLight::default());
+            // world.add_resource::<AmbientLight>(AmbientLight::default());
             world.add_resource::<Time>(time);
             world.register::<Child>();
-            world.register::<DirectionalLight>();
+            // world.register::<DirectionalLight>();
             world.register::<Init>();
             world.register::<LocalTransform>();
-            world.register::<PointLight>();
-            world.register::<Renderable>();
-            world.register::<Transform>();
+            // world.register::<PointLight>();
+            // world.register::<Renderable>();
+            // world.register::<Transform>();
         }
 
         Application {
             assets: assets,
             states: StateMachine::new(initial_state),
-            gfx_device: device,
-            pipe: pipe,
             dispatcher: dispatcher,
             world: world,
             timer: Stopwatch::new(),
@@ -155,8 +132,7 @@ impl<'a, 'b> Application<'a, 'b> {
     fn initialize(&mut self) {
         let world = &mut self.world;
         let assets = &mut self.assets;
-        let pipe = &mut self.pipe;
-        self.states.start(world, assets, pipe);
+        self.states.start(world, assets);
     }
 
     /// Advances the game world by one tick.
@@ -165,10 +141,9 @@ impl<'a, 'b> Application<'a, 'b> {
         {
             #[cfg(feature="profiler")]
             profile_scope!("handle_events");
-            let events = self.gfx_device.poll_events();
+            // let events = self.gfx_device.poll_events();
             let world = &mut self.world;
             let assets = &mut self.assets;
-            let pipe = &mut self.pipe;
 
             self.states
                 .handle_events(events.as_ref(), world, assets, pipe);
@@ -176,13 +151,13 @@ impl<'a, 'b> Application<'a, 'b> {
             #[cfg(feature="profiler")]
             profile_scope!("fixed_update");
             if self.last_fixed_update.elapsed() >= self.fixed_step {
-                self.states.fixed_update(world, assets, pipe);
+                self.states.fixed_update(world, assets);
                 self.last_fixed_update += self.fixed_step;
             }
 
             #[cfg(feature="profiler")]
             profile_scope!("update");
-            self.states.update(world, assets, pipe);
+            self.states.update(world, assets);
         }
 
         #[cfg(feature="profiler")]
@@ -193,10 +168,10 @@ impl<'a, 'b> Application<'a, 'b> {
         profile_scope!("render_world");
         {
             let world = &mut self.world;
-            if let Some((w, h)) = self.gfx_device.get_dimensions() {
-                let mut dim = world.write_resource::<ScreenDimensions>();
-                dim.update(w, h);
-            }
+            // if let Some((w, h)) = self.gfx_device.get_dimensions() {
+            //     let mut dim = world.write_resource::<ScreenDimensions>();
+            //     dim.update(w, h);
+            // }
 
             {
                 let mut time = world.write_resource::<Time>();
@@ -204,9 +179,6 @@ impl<'a, 'b> Application<'a, 'b> {
                 time.fixed_step = self.fixed_step;
                 time.last_fixed_update = self.last_fixed_update;
             }
-
-            let pipe = &mut self.pipe;
-            self.gfx_device.render_world(world, pipe);
         }
 
         self.world.maintain();
@@ -230,7 +202,6 @@ impl<'a, 'b> Application<'a, 'b> {
 pub struct ApplicationBuilder<'a, 'b, T>
     where T: State + 'static
 {
-    config: DisplayConfig,
     initial_state: T,
     dispatcher_builder: DispatcherBuilder<'a, 'b>,
     world: World,
@@ -248,7 +219,6 @@ impl<'a, 'b, T> ApplicationBuilder<'a, 'b, T>
                                 .expect("Failed to create rayon::ThreadPool"));
 
         ApplicationBuilder {
-            config: cfg,
             initial_state: initial_state,
             dispatcher_builder: DispatcherBuilder::new().with_pool(pool),
             world: World::new(),
