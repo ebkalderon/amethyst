@@ -1,6 +1,7 @@
 //! The core engine framework.
 
 use asset_manager::AssetManager;
+use config::DisplayConfig;
 use ecs::{Component, Planner, Priority, System, World};
 use ecs::components::{LocalTransform, Transform, Child, Init, Renderable};
 use ecs::resources::Time;
@@ -32,7 +33,7 @@ pub struct Application {
 impl Application {
     /// Creates a new Application with the given initial game state, planner,
     /// and display configuration.
-    pub fn new<T>(initial_state: T, mut planner: Planner<()>) -> Application
+    pub fn new<T:State>(initial_state: T, mut planner: Planner<()>) -> Application
         where T: State + 'static
     {
         use ecs::resources::{Camera, Projection, ScreenDimensions};
