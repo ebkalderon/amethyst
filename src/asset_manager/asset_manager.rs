@@ -3,7 +3,6 @@
 
 use cgmath::{InnerSpace, Vector3};
 use dds::DDS;
-use ecs::{Allocator, Component, Entity, MaskedStorage, Storage, VecStorage, World};
 use ecs::{Allocator, Component, Entity, GatedStorage, MaskedStorage, Storage, VecStorage, World};
 use ecs::components::{Mesh, Renderable, Texture, TextureLoadData};
 use fnv::FnvHashMap as HashMap;

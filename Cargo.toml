@@ -23,19 +23,19 @@ profiler = ["thread_profiler/thread_profiler"]
 [dependencies]
 amethyst_config = { path = "src/config/", version = "0.2" }
 amethyst_renderer = { path = "src/renderer", version = "0.5" }
-cgmath = "0.12"
+cgmath = "0.13"
 dds-rs = "0.4"
+derivative = "1.0"
 fnv = "1.0"
 num_cpus = "1.2"
 genmesh = "0.4"
-gfx = "0.14"
-glutin = "0.7"
 imagefmt = "4.0"
-specs = "0.8.1"
+specs = "0.8"
 thread_profiler = { version = "0.1", optional = true }
 threadpool = "1.3"
 ticketed_lock = "0.1"
 wavefront_obj = "5.0"
+winit = "0.6"
 
 [[example]]
 name = "hello_world"

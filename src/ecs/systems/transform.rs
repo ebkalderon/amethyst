@@ -1,13 +1,16 @@
 //! Scene graph system and types
 
 use cgmath::Matrix4;
-use ecs::{Join, Entity, RunArg, System};
-use ecs::components::{LocalTransform, Transform, Child, Init};
+use config::Config;
+use ecs::{Entity, Join, RunArg, System, World};
+use ecs::components::{Child, Init, LocalTransform, Transform};
+use ecs::systems::SystemExt;
+use error::Result;
 use fnv::{FnvHashMap as HashMap, FnvHashSet as HashSet};
 
 /// Handles updating `Transform` components based on the `LocalTransform`
 /// component and parents.
-#[derive(Default)]
+#[derive(Clone, Debug, Default)]
 pub struct TransformSystem {
     /// Map of entities to index in sorted vec.
     indices: HashMap<Entity, usize>,
@@ -27,14 +30,7 @@ pub struct TransformSystem {
 impl TransformSystem {
     /// Creates a new transform processor.
     pub fn new() -> TransformSystem {
-        TransformSystem {
-            indices: HashMap::default(),
-            sorted: Vec::new(),
-            new: Vec::new(),
-            dead: HashSet::default(),
-            dirty: HashSet::default(),
-            swapped: HashSet::default(),
-        }
+        TransformSystem::default()
     }
 }
 
@@ -164,6 +160,19 @@ impl System<()> for TransformSystem {
         self.dirty.clear();
         self.dead.clear();
         self.swapped.clear();
+    }
+}
+
+impl SystemExt for TransformSystem {
+    fn build(_: &Config) -> Result<TransformSystem> {
+        Ok(TransformSystem::default())
+    }
+
+    fn register(world: &mut World) {
+        world.register::<Child>();
+        world.register::<Init>();
+        world.register::<LocalTransform>();
+        world.register::<Transform>();
     }
 }
 
