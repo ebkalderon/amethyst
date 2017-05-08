@@ -27,25 +27,26 @@ impl From<MouseButton> for Button {
 
 /// An iterator over the currently pressed down keys.
 pub struct PressedKeys<'a> {
-    iterator: Iter<'a, VirtualKeyCode>,
+    iter: Iter<'a, VirtualKeyCode>,
 }
 
 impl<'a> Iterator for PressedKeys<'a> {
     type Item = &'a VirtualKeyCode;
+
     fn next(&mut self) -> Option<Self::Item> {
-        self.iterator.next()
+        self.iter.next()
     }
 }
 
 /// An iterator over the currently pressed down mouse buttons.
 pub struct PressedMouseButtons<'a> {
-    iterator: Iter<'a, MouseButton>,
+    iter: Iter<'a, MouseButton>,
 }
 
 impl<'a> Iterator for PressedMouseButtons<'a> {
     type Item = &'a MouseButton;
     fn next(&mut self) -> Option<Self::Item> {
-        self.iterator.next()
+        self.iter.next()
     }
 }
 
@@ -195,12 +196,15 @@ impl InputHandler {
     }
 
     /// Updates the input handler with new engine events.
+<<<<<<< HEAD
     pub fn update(&mut self, events: &[WindowEvent]) {
         // Before processing these events store the input states of the previous frame.
         self.current_frame.advance_frame(&mut self.previous_frame);
         self.text_this_frame.clear();
+
         for event in events {
-            match event.payload {
+            if let Event::WindowEvent(e) = event {
+            match e {
                 Event::ReceivedCharacter(c) => {
                     self.text_this_frame.push(c);
                 }

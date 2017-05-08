@@ -14,52 +14,37 @@
 //! ```no_run
 //! extern crate amethyst;
 //!
-//! use amethyst::{Application, Event, State, Trans, VirtualKeyCode, WindowEvent};
-//! use amethyst::asset_manager::AssetManager;
-//! use amethyst::project::Config;
-//! use amethyst::ecs::World;
-//! use amethyst::gfx_device::DisplayConfig;
-//! use amethyst::renderer::Pipeline;
+//! use amethyst::prelude::*;
 //!
 //! struct GameState;
 //!
 //! impl State for GameState {
-//!     fn on_start(&mut self, _: &mut World, _: &mut AssetManager, pipe: &mut Pipeline) {
-//!         use amethyst::renderer::pass::Clear;
-//!         use amethyst::renderer::Layer;
-//!         let clear_layer = Layer::new("main", vec![
-//!             Clear::new([0.0, 0.0, 0.0, 1.0]),
-//!         ]);
-//!         pipe.layers.push(clear_layer);
+//!     fn on_start(&mut self, _: &mut Engine) {
+//!         println!("Starting game!");
 //!     }
 //!
-//!     fn handle_events(&mut self,
-//!                      events: &[WindowEvent],
-//!                      _: &mut World,
-//!                      _: &mut AssetManager,
-//!                      _: &mut Pipeline) -> Trans {
-//!         for e in events {
-//!             match e.payload {
-//!                 Event::KeyboardInput(_, _, Some(VirtualKeyCode::Escape)) => return Trans::Quit,
-//!                 Event::Closed => return Trans::Quit,
+//!     fn handle_event(&mut self, _: &mut Engine, event: &Event) -> Trans {
+//!         if let Event::Window(e) = event {
+//!             match e {
+//!                 WindowEvent::KeyboardInput(_, _, Some(Key::Escape), _) |
+//!                 WindowEvent::Closed => return Trans::Quit,
 //!                 _ => (),
 //!             }
 //!         }
 //!         Trans::None
 //!     }
+//!
+//!     fn update(&mut self, _: &mut Engine) -> Trans {
+//!         println!("Computing some more whoop-ass...");
+//!     }
 //! }
 //!
 //! fn main() {
-//!     let path = format!("{}/examples/01_window/resources/config.yml",
-//!                        env!("CARGO_MANIFEST_DIR"));
-//!     let cfg = DisplayConfig::load(path);
-//!     let mut game = Application::build(GameState, cfg).done();
+//!     let mut game = Application::new(GameState).expect("Fatal error");
 //!     game.run();
 //! }
 //! ```
 
-#![crate_name = "amethyst"]
-#![crate_type = "lib"]
 #![deny(missing_docs)]
 #![doc(html_logo_url = "https://tinyurl.com/jtmm43a")]
 
@@ -76,21 +61,25 @@ extern crate toml;
 
 extern crate cgmath;
 extern crate dds;
+#[macro_use]
+extern crate derivative;
 extern crate fnv;
-extern crate gfx;
 extern crate genmesh;
-extern crate glutin;
 extern crate imagefmt;
 extern crate num_cpus;
 extern crate rayon;
 extern crate specs;
 extern crate wavefront_obj;
+extern crate winit;
 
 #[macro_use]
 pub mod project;
 pub mod asset_manager;
 pub mod ecs;
-
-mod engine;
+pub mod prelude;
 
 pub use engine::*;
+pub use error::*;
+
+mod engine;
+mod error;

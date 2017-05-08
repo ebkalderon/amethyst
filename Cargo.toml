@@ -24,11 +24,10 @@ profiler = ["thread_profiler/thread_profiler"]
 amethyst_renderer = { path = "src/renderer", version = "0.5" }
 cgmath = "0.14"
 dds-rs = "0.4"
+derivative = "1.0"
 fnv = "1.0"
 num_cpus = "1.2"
 genmesh = "0.4"
-gfx = "0.14"
-glutin = "0.7"
 imagefmt = "4.0"
 rayon = "0.7"
 serde = "0.9.7"
@@ -38,6 +37,7 @@ specs = "0.9.1"
 thread_profiler = { version = "0.1", optional = true }
 toml = "0.3"
 wavefront_obj = "5.0"
+winit = "0.6"
 
 [[example]]
 name = "hello_world"
