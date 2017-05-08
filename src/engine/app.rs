@@ -90,9 +90,7 @@ impl Application {
     }
 
     /// Builds a new application using builder pattern.
-    pub fn build<T>(initial_state: T) -> ApplicationBuilder<T>
-        where T: State + 'static
-    {
+    pub fn build<T: State>(initial_state: T) -> ApplicationBuilder<T> {
         ApplicationBuilder::new(initial_state)
     }
 
@@ -192,16 +190,12 @@ impl Application {
 }
 
 /// Helper builder for Applications.
-pub struct ApplicationBuilder<T>
-    where T: State + 'static
-{
+pub struct ApplicationBuilder<T: State> {
     initial_state: T,
     planner: Planner<()>,
 }
 
-impl<T> ApplicationBuilder<T>
-    where T: State + 'static
-{
+impl<T: State> ApplicationBuilder<T> {
     /// Creates a new ApplicationBuilder with the given initial game state and
     /// display configuration.
     pub fn new(initial_state: T, cfg: DisplayConfig) -> ApplicationBuilder<T> {
