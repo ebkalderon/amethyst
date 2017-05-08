@@ -1,17 +1,33 @@
 //! The core engine framework.
 
 use asset_manager::AssetManager;
+use config::Config;
 use ecs::{Component, Dispatcher, DispatcherBuilder, System, World};
 use ecs::components::{LocalTransform, Transform, Child, Init};
 use ecs::resources::Time;
+use ecs::systems::SystemExt;
+use engine::event::Event;
 use engine::state::{State, StateMachine};
-use engine::timing::Stopwatch;
+use engine::timing::{Stopwatch, Time};
+use error::{Error, Result};
+use rayon::{Configuration, ThreadPool};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use rayon::{Configuration, ThreadPool};
 
-#[cfg(feature="profiler")]
+#[cfg(feature = "profiler")]
 use thread_profiler::{register_thread_with_profiler, write_profile};
+
+/// User-facing engine handle.
+pub struct Engine<'e> {
+    /// Asset manager.
+    pub assets: &'e mut AssetManager,
+    /// Configuration.
+    pub config: &'e Config,
+    /// Current delta time value.
+    pub delta: Duration,
+    /// Mutable reference to the world.
+    pub world: &'e mut World,
+}
 
 /// User-friendly facade for building games. Manages main loop.
 pub struct Application<'a, 'b> {
@@ -23,10 +39,9 @@ pub struct Application<'a, 'b> {
     world: World,
 
     // State management and game loop timing structs.
-    delta_time: Duration,
-    fixed_step: Duration,
-    last_fixed_update: Instant,
+    config: Config,
     states: StateMachine,
+    time: Time,
     timer: Stopwatch,
 }
 
@@ -101,66 +116,74 @@ impl<'a, 'b> Application<'a, 'b> {
 
     /// Starts the application and manages the game loop.
     pub fn run(&mut self) {
-        {
-            #[cfg(feature="profiler")]
-            profile_scope!("initialize");
-            self.initialize();
-        }
+        self.initialize();
 
         while self.states.is_running() {
             self.timer.restart();
             self.advance_frame();
             self.timer.stop();
-            self.delta_time = self.timer.elapsed();
+            self.time.delta_time = self.timer.elapsed();
         }
-
-        {
-            #[cfg(feature="profiler")]
-            profile_scope!("shutdown");
-            self.shutdown();
-        }
-        #[cfg(feature="profiler")]
-        self.write_profile();
-    }
-
-    /// Direct access to `World`
-    pub fn world_mut(&mut self) -> &mut World {
-        &mut self.world
     }
 
     /// Sets up the application.
     fn initialize(&mut self) {
+        #[cfg(feature = "profiler")]
+        profile_scope!("initialize");
+
         let world = &mut self.world;
-        let assets = &mut self.assets;
-        self.states.start(world, assets);
+        world.add_resource(self.time.clone());
+
+        let mut engine = Engine {
+            assets: &mut self.assets,
+            config: &self.config,
+            delta: self.time.delta_time,
+            world: world,
+        };
+
+        self.states.start(&mut engine);
     }
 
     /// Advances the game world by one tick.
     fn advance_frame(&mut self) {
-        use ecs::resources::ScreenDimensions;
         {
-            #[cfg(feature="profiler")]
-            profile_scope!("handle_events");
-            // let events = self.gfx_device.poll_events();
-            let world = &mut self.world;
-            let assets = &mut self.assets;
+            let mut world = self.planner.mut_world();
+            let mut time = world.write_resource::<Time>().pass();
+            time.delta_time = self.time.delta_time;
+            time.fixed_step = self.time.fixed_step;
+            time.last_fixed_update = self.time.last_fixed_update;
+
+            let mut engine = Engine {
+                assets: &mut self.assets,
+                config: &self.config,
+                delta: self.time.delta_time,
+                world: world,
+            };
+
+            #[cfg(feature = "profiler")]
+            profile_scope!("handle_event");
 
             self.states
                 .handle_events(events.as_ref(), world, assets, pipe);
 
-            #[cfg(feature="profiler")]
-            profile_scope!("fixed_update");
-            if self.last_fixed_update.elapsed() >= self.fixed_step {
-                self.states.fixed_update(world, assets);
-                self.last_fixed_update += self.fixed_step;
+            let mut events: Vec<Event> = Vec::new();
+            while let Some(e) = events.pop() {
+                self.states.handle_event(&mut engine, e);
             }
 
-            #[cfg(feature="profiler")]
+            #[cfg(feature = "profiler")]
+            profile_scope!("fixed_update");
+            if self.time.last_fixed_update.elapsed() >= self.time.fixed_step {
+                self.states.fixed_update(&mut engine);
+                self.time.last_fixed_update += self.time.fixed_step;
+            }
+
+            #[cfg(feature = "profiler")]
             profile_scope!("update");
-            self.states.update(world, assets);
+            self.states.update(&mut engine);
         }
 
-        #[cfg(feature="profiler")]
+        #[cfg(feature = "profiler")]
         profile_scope!("dispatch");
         self.dispatcher.dispatch(&mut self.world.res);
 
@@ -189,8 +212,8 @@ impl<'a, 'b> Application<'a, 'b> {
         // Placeholder.
     }
 
-    #[cfg(feature="profiler")]
     /// Writes thread_profiler profile.
+    #[cfg(feature = "profiler")]
     fn write_profile(&self) {
         // TODO: Specify filename in config.
         let path = format!("{}/thread_profile.json", env!("CARGO_MANIFEST_DIR"));
@@ -198,10 +221,18 @@ impl<'a, 'b> Application<'a, 'b> {
     }
 }
 
+impl Drop for Application {
+    fn drop(&mut self) {
+        #[cfg(feature = "profiler")]
+        self.write_profile();
+    }
+}
+
 /// Helper builder for Applications.
 pub struct ApplicationBuilder<'a, 'b, T>
     where T: State + 'static
 {
+    config: DisplayConfig,
     initial_state: T,
     dispatcher_builder: DispatcherBuilder<'a, 'b>,
     world: World,
@@ -219,6 +250,8 @@ impl<'a, 'b, T> ApplicationBuilder<'a, 'b, T>
                                 .expect("Failed to create rayon::ThreadPool"));
 
         ApplicationBuilder {
+            config: cfg,
+            errors: Vec::new(),
             initial_state: initial_state,
             dispatcher_builder: DispatcherBuilder::new().with_pool(pool),
             world: World::new(),

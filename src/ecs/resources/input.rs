@@ -112,6 +112,7 @@ impl InputHandler {
     }
 
     /// Updates the input handler with new engine events.
+<<<<<<< HEAD
     pub fn update(&mut self, events: &[WindowEvent]) {
         // Before processing these events clear the single frame vectors
         self.down_keys.clear();
@@ -120,8 +121,10 @@ impl InputHandler {
         self.released_mouse_buttons.clear();
         self.previous_mouse_position = self.mouse_position;
         self.text_this_frame.clear();
+
         for event in events {
-            match event.payload {
+            if let Event::WindowEvent(e) = event {
+            match e {
                 Event::ReceivedCharacter(c) => {
                     self.text_this_frame.push(c);
                 }
