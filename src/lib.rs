@@ -72,9 +72,11 @@ extern crate winit;
 pub mod asset_manager;
 pub mod ecs;
 pub mod prelude;
+#[macro_use]
+pub mod project;
 
-pub use engine::*;
-pub use error::*;
-
-mod engine;
+mod app;
+mod event;
+mod state;
+mod timing;
 mod error;
