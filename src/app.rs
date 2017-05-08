@@ -1,16 +1,12 @@
 //! The core engine framework.
 
-#[cfg(feature = "profiler")]
-use thread_profiler::{register_thread_with_profiler, write_profile};
-
 // use asset_manager::AssetManager;
 use config::Config;
-use ecs::{Component, Gate, Planner, Priority, World};
+use ecs::{Gate, Planner, Priority, World};
 use ecs::systems::SystemExt;
-use engine::event::Event;
-use engine::state::{State, StateMachine};
-use engine::timing::{Stopwatch, Time};
 use error::{Error, Result};
+use state::{State, StateMachine};
+use timing::{Stopwatch, Time};
 use std::time::Duration;
 
 /// User-facing engine handle.
@@ -24,28 +20,27 @@ pub struct Engine<'e> {
 }
 
 /// User-friendly facade for building games. Manages main loop.
-pub struct Application {
+pub struct Application<'a> {
     config: Config,
     // assets: AssetManager,
     planner: Planner<()>,
-    states: StateMachine,
+    states: StateMachine<'a>,
     time: Time,
     timer: Stopwatch,
 }
 
-impl Application {
+impl<'a> Application<'a> {
     /// Creates a new Application with the given initial game state.
-    pub fn new<S: State + 'static>(initial_state: S) -> Result<Application> {
-        use ecs::systems::{RenderingSystem, TransformSystem};
+    pub fn new<S: State + 'a>(initial_state: S) -> Result<Application<'a>> {
+        use ecs::systems::TransformSystem;
         ApplicationBuilder::new(initial_state, Config::default())
             .with_system::<TransformSystem>("trans", 0)
-            .with_system::<RenderingSystem>("render", 0)
             .finish()
     }
 
     /// Builds a new application using builder pattern.
     pub fn build<S>(initial_state: S, cfg: Config) -> ApplicationBuilder<S>
-        where S: State + 'static
+        where S: State + 'a
     {
         ApplicationBuilder::new(initial_state, cfg)
     }
@@ -82,6 +77,8 @@ impl Application {
     /// Advances the game world by one tick.
     fn advance_frame(&mut self) {
         {
+            use event::Event;
+
             let mut world = self.planner.mut_world();
             let mut time = world.write_resource::<Time>().pass();
             time.delta_time = self.time.delta_time;
@@ -129,11 +126,11 @@ impl Application {
     fn write_profile(&self) {
         // TODO: Specify filename in config.
         let path = format!("{}/thread_profile.json", env!("CARGO_MANIFEST_DIR"));
-        write_profile(path.as_str());
+        thread_profiler::write_profile(path.as_str());
     }
 }
 
-impl Drop for Application {
+impl<'a> Drop for Application<'a> {
     fn drop(&mut self) {
         #[cfg(feature = "profiler")]
         self.write_profile();
@@ -143,7 +140,7 @@ impl Drop for Application {
 /// Helper builder for Applications.
 #[derive(Derivative)]
 #[derivative(Debug)]
-pub struct ApplicationBuilder<T: State + 'static>{
+pub struct ApplicationBuilder<T: State>{
     config: Config,
     errors: Vec<Error>,
     #[derivative(Debug = "ignore")]
@@ -152,10 +149,10 @@ pub struct ApplicationBuilder<T: State + 'static>{
     planner: Planner<()>,
 }
 
-impl<T: State + 'static> ApplicationBuilder<T> {
+impl<'a, T: State + 'a> ApplicationBuilder<T> {
     /// Creates a new ApplicationBuilder with the given initial game state and
     /// display configuration.
-    pub fn new(initial_state: T, cfg: Config) -> ApplicationBuilder<T> {
+    pub fn new(initial_state: T, cfg: Config) -> Self {
         use num_cpus;
 
         ApplicationBuilder {
@@ -164,12 +161,6 @@ impl<T: State + 'static> ApplicationBuilder<T> {
             initial_state: initial_state,
             planner: Planner::with_num_threads(World::new(), num_cpus::get()),
         }
-    }
-
-    /// Registers a given component type.
-    pub fn register<C: Component>(mut self) -> Self {
-        self.planner.mut_world().register::<C>();
-        self
     }
 
     /// Adds a given system `sys`, assigns it the string identifier `name`,
@@ -187,9 +178,9 @@ impl<T: State + 'static> ApplicationBuilder<T> {
     }
 
     /// Builds the Application and returns the result.
-    pub fn finish(self) -> Result<Application> {
+    pub fn finish(self) -> Result<Application<'a>> {
         #[cfg(feature = "profiler")]
-        register_thread_with_profiler("Main".into());
+        thread_profile::register_thread_with_profiler("Main".into());
         #[cfg(feature = "profiler")]
         profile_scope!("new");
 
