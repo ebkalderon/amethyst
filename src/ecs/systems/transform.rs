@@ -6,6 +6,7 @@ use ecs::{Entity, Join, RunArg, System, World};
 use ecs::components::{Child, Init, LocalTransform, Transform};
 use ecs::systems::SystemExt;
 use error::Result;
+use event::EventSender;
 use fnv::{FnvHashMap as HashMap, FnvHashSet as HashSet};
 
 /// Handles updating `Transform` components based on the `LocalTransform`
@@ -25,13 +26,6 @@ pub struct TransformSystem {
     dirty: HashSet<Entity>,
     /// Prevent circular infinite loops with parents.
     swapped: HashSet<Entity>,
-}
-
-impl TransformSystem {
-    /// Creates a new transform processor.
-    pub fn new() -> TransformSystem {
-        TransformSystem::default()
-    }
 }
 
 impl System<()> for TransformSystem {
@@ -164,7 +158,7 @@ impl System<()> for TransformSystem {
 }
 
 impl SystemExt for TransformSystem {
-    fn build(_: &Config) -> Result<TransformSystem> {
+    fn build(_: &Config, _: EventSender) -> Result<TransformSystem> {
         Ok(TransformSystem::default())
     }
 

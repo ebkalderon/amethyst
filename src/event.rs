@@ -4,7 +4,14 @@
 pub use winit::{ElementState, MouseButton, MouseScrollDelta, ScanCode,
                 TouchPhase, VirtualKeyCode as Key, WindowEvent};
 
+use std::sync::mpsc;
 use winit::Event as WinitEvent;
+
+/// Receiver half of an event queue channel.
+pub type EventReceiver = mpsc::Receiver<Event>;
+
+/// Sender half of an event queue channel.
+pub type EventSender = mpsc::Sender<Event>;
 
 /// Generic engine event.
 #[derive(Debug)]
@@ -27,23 +34,5 @@ impl From<WinitEvent> for Event {
 impl From<WindowEvent> for Event {
     fn from(e: WindowEvent) -> Event {
         Event::Window(e)
-    }
-}
-
-/// Iterable stream of events.
-#[derive(Debug, Default)]
-pub struct EventsIter(Vec<Event>);
-
-impl Iterator for EventsIter {
-    type Item = Event;
-
-    fn next(&mut self) -> Option<Event> {
-        self.0.pop()
-    }
-}
-
-impl<E: Into<Event>> From<Vec<E>> for EventsIter {
-    fn from(e: Vec<E>) -> EventsIter {
-        EventsIter(e.into_iter().map(|e| e.into()).collect())
     }
 }

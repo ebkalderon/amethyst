@@ -6,7 +6,7 @@ pub use self::transform::TransformSystem;
 use config::Config;
 use error::Result;
 use ecs::{System, World};
-use event::EventsIter;
+use event::EventSender;
 
 mod rendering;
 mod transform;
@@ -14,13 +14,8 @@ mod transform;
 /// Extension trait for all systems.
 pub trait SystemExt: System<()> {
     /// Constructs a new system with the given configuration. 
-    fn build(cfg: &Config) -> Result<Self> where Self: Sized;
+    fn build(cfg: &Config, send: EventSender) -> Result<Self> where Self: Sized;
 
     /// Registers all supported components with the World.
     fn register(world: &mut World);
-
-    /// Polls the system's event queue.
-    fn poll_events(&self) -> EventsIter {
-        EventsIter::default()
-    }
 }

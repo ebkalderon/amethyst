@@ -1,10 +1,10 @@
 //! The core engine framework.
 
-// use asset_manager::AssetManager;
 use config::Config;
 use ecs::{Gate, Planner, Priority, World};
 use ecs::systems::SystemExt;
 use error::{Error, Result};
+use event::{EventReceiver, EventSender};
 use rayon::ThreadPool;
 use state::{State, StateMachine};
 use std::sync::Arc;
@@ -48,6 +48,7 @@ impl Engine {
 /// User-friendly facade for building games. Manages main loop.
 pub struct Application<'a> {
     engine: Engine,
+    events: EventReceiver,
     states: StateMachine<'a>,
     timer: Stopwatch,
 }
@@ -102,13 +103,7 @@ impl<'a> Application<'a> {
 
         #[cfg(feature = "profiler")]
         profile_scope!("handle_event");
-
-        // let mut events = self.planner.systems.iter()
-        //     .map(|s| s.poll_events())
-        //     .collect();
-
-        let mut events: Vec<::event::Event> = Vec::new();
-        while let Some(e) = events.pop() {
+        for e in self.events.iter() {
             self.states.handle_event(engine, e);
         }
 
@@ -146,17 +141,14 @@ impl<'a> Drop for Application<'a> {
 }
 
 /// Helper builder for Applications.
-#[derive(Derivative)]
-#[derivative(Debug)]
 pub struct ApplicationBuilder<T: State>{
     config: Config,
     errors: Vec<Error>,
-    #[derivative(Debug = "ignore")]
     initial_state: T,
-    #[derivative(Debug = "ignore")]
     planner: Planner<()>,
-    #[derivative(Debug = "ignore")]
     pool: Arc<ThreadPool>,
+    recv: EventReceiver,
+    send: EventSender,
 }
 
 impl<'a, T: State + 'a> ApplicationBuilder<T> {
@@ -165,10 +157,13 @@ impl<'a, T: State + 'a> ApplicationBuilder<T> {
     pub fn new(initial_state: T, cfg: Config) -> Self {
         use num_cpus;
         use rayon::Configuration;
+        use std::sync::mpsc;
 
         let num_cores = num_cpus::get();
         let pool_cfg = Configuration::new().num_threads(num_cores);
         let pool = ThreadPool::new(pool_cfg).map(|p| Arc::new(p)).unwrap();
+
+        let (send, recv) = mpsc::channel();
 
         ApplicationBuilder {
             config: cfg,
@@ -176,6 +171,8 @@ impl<'a, T: State + 'a> ApplicationBuilder<T> {
             initial_state: initial_state,
             planner: Planner::from_pool(World::new(), pool.clone()),
             pool: pool,
+            recv: recv,
+            send: send,
         }
     }
 
@@ -185,7 +182,7 @@ impl<'a, T: State + 'a> ApplicationBuilder<T> {
         where S: SystemExt + 'static
     {
         S::register(self.planner.mut_world());
-        match S::build(&self.config) {
+        match S::build(&self.config, self.send.clone()) {
             Ok(sys) => self.planner.add_system(sys, name.into(), pri),
             Err(e) => self.errors.push(e),
         }
@@ -209,6 +206,7 @@ impl<'a, T: State + 'a> ApplicationBuilder<T> {
                     time: Time::default(),
                     pool: self.pool,
                 },
+                events: self.recv,
                 states: StateMachine::new(self.initial_state),
                 timer: Stopwatch::new(),
             })

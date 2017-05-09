@@ -2,7 +2,7 @@
 
 use config::Config;
 use ecs::{RunArg, System, World};
-use event::EventsIter;
+use event::EventSender;
 use error::Result;
 use renderer::prelude::*;
 use super::SystemExt;
@@ -12,39 +12,32 @@ use winit::EventsLoop;
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct RenderingSystem {
-    #[derivative(Debug = "ignore")]
-    events: EventsLoop,
+    events: EventSender,
     // renderer: Renderer,
     scene: Scene,
+    #[derivative(Debug = "ignore")]
+    win_events: EventsLoop,
 }
 
 impl SystemExt for RenderingSystem {
-    fn build(_: &Config) -> Result<RenderingSystem> {
+    fn build(_: &Config, send: EventSender) -> Result<RenderingSystem> {
         let events = EventsLoop::new();
         // let renderer = Renderer::new(&events)?;
         Ok(RenderingSystem {
-            events: events,
+            events: send,
             // renderer: Mutex::new(renderer),
             scene: Scene::default(),
+            win_events: events,
         })
     }
 
-    fn register(_world: &mut World) {
-
-    }
-
-    fn poll_events(&self) -> EventsIter {
-        let mut new_events = Vec::new();
-        self.events.poll_events(|e| {
-            new_events.push(e);
-        });
-
-        EventsIter::from(new_events)
-    }
+    fn register(_world: &mut World) {}
 }
 
 impl System<()> for RenderingSystem {
     fn run(&mut self, arg: RunArg, _: ()) {
-        use ecs::Gate;
+        self.win_events.poll_events(|e| {
+            self.events.send(e.into()).expect("Broken channel");
+        });
     }
 }
