@@ -9,14 +9,14 @@ struct Example;
 
 impl State for Example {
     fn handle_event(&mut self, _: &mut Engine, event: Event) -> Trans {
-        if let Event::Window(e) = event {
-            match e {
+        match event {
+            Event::Window(e) => match e {
                 WindowEvent::KeyboardInput(_, _, Some(Key::Escape), _) |
-                WindowEvent::Closed => return Trans::Quit,
-                _ => (),
-            }
+                WindowEvent::Closed => Trans::Quit,
+                _ => Trans::None,
+            },
+            _ => Trans::None,
         }
-        Trans::None
     }
 }
 
@@ -27,7 +27,7 @@ fn main() {
     let mut game = Application::build(Example, cfg)
         .with_system::<TransformSystem>("trans", 0)
         .finish()
-        .expect("Could not create game");
+        .expect("Fatal error");
 
     game.run();
 }

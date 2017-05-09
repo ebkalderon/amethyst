@@ -24,6 +24,17 @@ pub struct Engine {
 }
 
 impl Engine {
+    /// Creates a new `Engine` handle from the given inputs.
+    #[doc(hidden)]
+    pub fn new(cfg: Config, plan: Planner<()>, pool: Arc<ThreadPool>) -> Engine {
+        Engine {
+            config: cfg,
+            planner: plan,
+            pool: pool,
+            time: Time::default(),
+        }
+    }
+
     /// Spawns a parallel task in the engine threadpool.
     pub fn spawn_task<R, T: FnOnce() -> R + Send> (&self, task: T) -> R {
         self.pool.install(task)
@@ -200,12 +211,7 @@ impl<'a, T: State + 'a> ApplicationBuilder<T> {
         match self.errors.last() {
             Some(_) => Err(Error::Application),
             None => Ok(Application {
-                engine: Engine {
-                    config: self.config,
-                    planner: self.planner,
-                    time: Time::default(),
-                    pool: self.pool,
-                },
+                engine: Engine::new(self.config, self.planner, self.pool),
                 events: self.recv,
                 states: StateMachine::new(self.initial_state),
                 timer: Stopwatch::new(),
