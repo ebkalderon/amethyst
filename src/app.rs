@@ -11,6 +11,9 @@ use std::sync::Arc;
 use std::time::Duration;
 use timing::{Stopwatch, Time};
 
+#[cfg(feature = "profiler")]
+use thread_profiler::{register_thread_with_profiler, write_profile};
+
 /// User-facing engine handle.
 #[derive(Derivative)]
 #[derivative(Debug)]
@@ -57,6 +60,7 @@ impl Engine {
 }
 
 /// User-friendly facade for building games. Manages main loop.
+#[derive(Debug)]
 pub struct Application<'a> {
     engine: Engine,
     events: EventReceiver,
@@ -134,20 +138,14 @@ impl<'a> Application<'a> {
         engine.planner.dispatch(());
         engine.planner.wait();
     }
-
-    /// Writes thread_profiler profile.
-    #[cfg(feature = "profiler")]
-    fn write_profile(&self) {
-        // TODO: Specify filename in config.
-        let path = format!("{}/thread_profile.json", env!("CARGO_MANIFEST_DIR"));
-        thread_profiler::write_profile(path.as_str());
-    }
 }
 
+#[cfg(feature = "profiler")]
 impl<'a> Drop for Application<'a> {
     fn drop(&mut self) {
-        #[cfg(feature = "profiler")]
-        self.write_profile();
+        // TODO: Specify filename in config.
+        let path = format!("{}/thread_profile.json", env!("CARGO_MANIFEST_DIR"));
+        write_profile(path.as_str());
     }
 }
 
@@ -173,7 +171,6 @@ impl<'a, T: State + 'a> ApplicationBuilder<T> {
         let num_cores = num_cpus::get();
         let pool_cfg = Configuration::new().num_threads(num_cores);
         let pool = ThreadPool::new(pool_cfg).map(|p| Arc::new(p)).unwrap();
-
         let (send, recv) = mpsc::channel();
 
         ApplicationBuilder {
@@ -204,7 +201,7 @@ impl<'a, T: State + 'a> ApplicationBuilder<T> {
     /// Builds the Application and returns the result.
     pub fn finish(self) -> Result<Application<'a>> {
         #[cfg(feature = "profiler")]
-        thread_profile::register_thread_with_profiler("Main".into());
+        register_thread_with_profiler("Main".into());
         #[cfg(feature = "profiler")]
         profile_scope!("new");
 
