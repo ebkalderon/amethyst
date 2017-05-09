@@ -36,6 +36,7 @@
 //!
 //!     fn update(&mut self, _: &mut Engine) -> Trans {
 //!         println!("Computing some more whoop-ass...");
+//!         Trans::None
 //!     }
 //! }
 //!
@@ -62,8 +63,9 @@ extern crate fnv;
 extern crate genmesh;
 extern crate imagefmt;
 extern crate num_cpus;
+extern crate rayon;
 extern crate specs;
-extern crate threadpool;
+// extern crate threadpool;
 extern crate ticketed_lock;
 extern crate wavefront_obj;
 extern crate winit;

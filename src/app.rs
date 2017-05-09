@@ -5,27 +5,50 @@ use config::Config;
 use ecs::{Gate, Planner, Priority, World};
 use ecs::systems::SystemExt;
 use error::{Error, Result};
+use rayon::ThreadPool;
 use state::{State, StateMachine};
-use timing::{Stopwatch, Time};
+use std::sync::Arc;
 use std::time::Duration;
+use timing::{Stopwatch, Time};
 
 /// User-facing engine handle.
-pub struct Engine<'e> {
-    /// Configuration.
-    pub config: &'e Config,
-    /// Current delta time value.
-    pub delta: Duration,
-    /// Mutable reference to the world.
-    pub world: &'e mut World,
+#[derive(Derivative)]
+#[derivative(Debug)]
+pub struct Engine {
+    config: Config,
+    #[derivative(Debug = "ignore")]
+    planner: Planner<()>,
+    #[derivative(Debug = "ignore")]
+    pool: Arc<ThreadPool>,
+    time: Time,
+}
+
+impl Engine {
+    /// Spawns a parallel task in the engine threadpool.
+    pub fn spawn_task<R, T: FnOnce() -> R + Send> (&self, task: T) -> R {
+        self.pool.install(task)
+    }
+
+    /// Sets the fixed time step duration for `fixed_update()`.
+    pub fn set_fixed_step<D: Into<Duration>>(&mut self, fixed_delta: D) {
+        self.time.fixed_step = fixed_delta.into();
+    }
+
+    /// Gets current timing information from the engine.
+    pub fn time(&self) -> Time {
+        self.time.clone()
+    }
+
+    /// Returns a mutable reference to the world.
+    pub fn world_mut(&mut self) -> &mut World {
+        self.planner.mut_world()
+    }
 }
 
 /// User-friendly facade for building games. Manages main loop.
 pub struct Application<'a> {
-    config: Config,
-    // assets: AssetManager,
-    planner: Planner<()>,
+    engine: Engine,
     states: StateMachine<'a>,
-    time: Time,
     timer: Stopwatch,
 }
 
@@ -53,7 +76,7 @@ impl<'a> Application<'a> {
             self.timer.restart();
             self.advance_frame();
             self.timer.stop();
-            self.time.delta_time = self.timer.elapsed();
+            self.engine.time.delta_time = self.timer.elapsed();
         }
     }
 
@@ -62,63 +85,48 @@ impl<'a> Application<'a> {
         #[cfg(feature = "profiler")]
         profile_scope!("initialize");
 
-        let mut world = self.planner.mut_world();
-        world.add_resource(self.time.clone());
+        let time = self.engine.time.clone();
+        self.engine.planner.mut_world().add_resource(time);
 
-        let mut engine = Engine {
-            config: &self.config,
-            delta: self.time.delta_time,
-            world: world,
-        };
-
-        self.states.start(&mut engine);
+        self.states.start(&mut self.engine);
     }
 
     /// Advances the game world by one tick.
     fn advance_frame(&mut self) {
-        {
-            use event::Event;
+        let ref mut engine = self.engine;
 
-            let mut world = self.planner.mut_world();
-            let mut time = world.write_resource::<Time>().pass();
-            time.delta_time = self.time.delta_time;
-            time.fixed_step = self.time.fixed_step;
-            time.last_fixed_update = self.time.last_fixed_update;
+        let mut time = engine.planner.mut_world().write_resource::<Time>().pass();
+        time.delta_time = engine.time.delta_time;
+        time.fixed_step = engine.time.fixed_step;
+        time.last_fixed_update = engine.time.last_fixed_update;
 
-            let mut engine = Engine {
-                config: &self.config,
-                delta: self.time.delta_time,
-                world: world,
-            };
+        #[cfg(feature = "profiler")]
+        profile_scope!("handle_event");
 
-            #[cfg(feature = "profiler")]
-            profile_scope!("handle_event");
+        // let mut events = self.planner.systems.iter()
+        //     .map(|s| s.poll_events())
+        //     .collect();
 
-            // let mut events = self.planner.systems.iter()
-            //     .map(|s| s.poll_events())
-            //     .collect();
-
-            let mut events: Vec<Event> = Vec::new();
-            while let Some(e) = events.pop() {
-                self.states.handle_event(&mut engine, e);
-            }
-
-            #[cfg(feature = "profiler")]
-            profile_scope!("fixed_update");
-            if self.time.last_fixed_update.elapsed() >= self.time.fixed_step {
-                self.states.fixed_update(&mut engine);
-                self.time.last_fixed_update += self.time.fixed_step;
-            }
-
-            #[cfg(feature = "profiler")]
-            profile_scope!("update");
-            self.states.update(&mut engine);
+        let mut events: Vec<::event::Event> = Vec::new();
+        while let Some(e) = events.pop() {
+            self.states.handle_event(engine, e);
         }
 
         #[cfg(feature = "profiler")]
+        profile_scope!("fixed_update");
+        if time.last_fixed_update.elapsed() >= time.fixed_step {
+            self.states.fixed_update(engine);
+            time.last_fixed_update += time.fixed_step;
+        }
+
+        #[cfg(feature = "profiler")]
+        profile_scope!("update");
+        self.states.update(engine);
+
+        #[cfg(feature = "profiler")]
         profile_scope!("dispatch");
-        self.planner.dispatch(());
-        self.planner.wait();
+        engine.planner.dispatch(());
+        engine.planner.wait();
     }
 
     /// Writes thread_profiler profile.
@@ -147,6 +155,8 @@ pub struct ApplicationBuilder<T: State>{
     initial_state: T,
     #[derivative(Debug = "ignore")]
     planner: Planner<()>,
+    #[derivative(Debug = "ignore")]
+    pool: Arc<ThreadPool>,
 }
 
 impl<'a, T: State + 'a> ApplicationBuilder<T> {
@@ -154,12 +164,18 @@ impl<'a, T: State + 'a> ApplicationBuilder<T> {
     /// display configuration.
     pub fn new(initial_state: T, cfg: Config) -> Self {
         use num_cpus;
+        use rayon::Configuration;
+
+        let num_cores = num_cpus::get();
+        let pool_cfg = Configuration::new().num_threads(num_cores);
+        let pool = ThreadPool::new(pool_cfg).map(|p| Arc::new(p)).unwrap();
 
         ApplicationBuilder {
             config: cfg,
             errors: Vec::new(),
             initial_state: initial_state,
-            planner: Planner::with_num_threads(World::new(), num_cpus::get()),
+            planner: Planner::from_pool(World::new(), pool.clone()),
+            pool: pool,
         }
     }
 
@@ -187,10 +203,13 @@ impl<'a, T: State + 'a> ApplicationBuilder<T> {
         match self.errors.last() {
             Some(_) => Err(Error::Application),
             None => Ok(Application {
-                config: self.config,
+                engine: Engine {
+                    config: self.config,
+                    planner: self.planner,
+                    time: Time::default(),
+                    pool: self.pool,
+                },
                 states: StateMachine::new(self.initial_state),
-                planner: self.planner,
-                time: Time::default(),
                 timer: Stopwatch::new(),
             })
         }

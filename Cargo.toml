@@ -30,9 +30,11 @@ fnv = "1.0"
 num_cpus = "1.2"
 genmesh = "0.4"
 imagefmt = "4.0"
-specs = "0.8"
+rayon = "0.7"
+# specs = "0.8"
+specs = { version = "0.8", git = "https://github.com/slide-rs/specs" }
 thread_profiler = { version = "0.1", optional = true }
-threadpool = "1.3"
+# threadpool = "1.3"
 ticketed_lock = "0.1"
 wavefront_obj = "5.0"
 winit = "0.6"
