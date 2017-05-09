@@ -29,7 +29,12 @@ pub struct Engine<'e> {
 }
 
 /// User-friendly facade for building games. Manages main loop.
+<<<<<<< develop
 pub struct Application<'a, 'b> {
+=======
+#[derive(Debug)]
+pub struct Application<'a> {
+>>>>>>> HEAD~13
     // Graphics and asset management structs.
     assets: AssetManager,
     gfx_device: GfxDevice,
@@ -212,20 +217,14 @@ impl<'a, 'b> Application<'a, 'b> {
     fn shutdown(&mut self) {
         // Placeholder.
     }
-
-    /// Writes thread_profiler profile.
-    #[cfg(feature = "profiler")]
-    fn write_profile(&self) {
-        // TODO: Specify filename in config.
-        let path = format!("{}/thread_profile.json", env!("CARGO_MANIFEST_DIR"));
-        thread_profiler::write_profile(path.as_str());
-    }
 }
 
+#[cfg(feature = "profiler")]
 impl<'a> Drop for Application<'a> {
     fn drop(&mut self) {
-        #[cfg(feature = "profiler")]
-        self.write_profile();
+        // TODO: Specify filename in config.
+        let path = format!("{}/thread_profile.json", env!("CARGO_MANIFEST_DIR"));
+        write_profile(path.as_str());
     }
 }
 
@@ -247,8 +246,14 @@ impl<'a, 'b, T> ApplicationBuilder<'a, 'b, T>
     pub fn new(initial_state: T, cfg: DisplayConfig) -> ApplicationBuilder<'a, 'b, T> {
         use rayon::Configuration;
 
+<<<<<<< develop
         let pool = Arc::new(ThreadPool::new(Configuration::new().num_threads(num_cpus::get()))
                                 .expect("Failed to create rayon::ThreadPool"));
+=======
+        let num_cores = num_cpus::get();
+        let pool_cfg = Configuration::new().num_threads(num_cores);
+        let pool = ThreadPool::new(pool_cfg).map(|p| Arc::new(p)).unwrap();
+>>>>>>> HEAD~13
 
         ApplicationBuilder {
             config: cfg,
