@@ -47,7 +47,7 @@ impl Engine {
 
     /// Gets current timing information from the engine.
     pub fn time(&self) -> Time {
-        self.time.clone()
+        self.time
     }
 
     /// Returns a mutable reference to the world.
