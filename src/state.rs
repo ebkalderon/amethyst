@@ -49,18 +49,24 @@ pub trait State {
     }
 }
 
+impl<'s, S: State + 's> From<S> for Box<State + 's> {
+    fn from(state: S) -> Box<State + 's> {
+        Box::new(state)
+    }
+}
+
 /// A simple stack-based state machine (pushdown automaton).
 #[derive(Derivative)]
 #[derivative(Debug)]
-pub struct StateMachine<'a> {
+pub struct StateMachine<'s> {
     running: bool,
     #[derivative(Debug = "ignore")]
-    state_stack: Vec<Box<State + 'a>>,
+    state_stack: Vec<Box<State + 's>>,
 }
 
-impl<'a> StateMachine<'a> {
+impl<'s> StateMachine<'s> {
     /// Creates a new state machine with the given initial state.
-    pub fn new<S: State + 'a>(initial_state: S) -> StateMachine<'a> {
+    pub fn new<S: State + 's>(initial_state: S) -> StateMachine<'s> {
         StateMachine {
             running: false,
             state_stack: vec![Box::new(initial_state)],
@@ -120,8 +126,8 @@ impl<'a> StateMachine<'a> {
         }
     }
 
-    /// Performs a state transition, if requested by either update() or
-    /// fixed_update().
+    /// Performs a state transition, if requested by either `handle_event()`,
+    /// `update()`, or `fixed_update()`.
     fn transition(&mut self, request: Trans, engine: &mut Engine) {
         if self.running {
             match request {
@@ -135,26 +141,26 @@ impl<'a> StateMachine<'a> {
     }
 
     /// Removes the current state on the stack and inserts a different one.
-    fn switch(&mut self, state: Box<State>, engine: &mut Engine) {
+    fn switch<S: Into<Box<State>>>(&mut self, state: S, engine: &mut Engine) {
         if self.running {
             if let Some(mut state) = self.state_stack.pop() {
                 state.on_stop(engine);
             }
 
-            self.state_stack.push(state);
+            self.state_stack.push(state.into());
             let state = self.state_stack.last_mut().unwrap();
             state.on_start(engine);
         }
     }
 
     /// Pauses the active state and pushes a new state onto the state stack.
-    fn push(&mut self, state: Box<State>, engine: &mut Engine) {
+    fn push<S: Into<Box<State>>>(&mut self, state: S, engine: &mut Engine) {
         if self.running {
             if let Some(state) = self.state_stack.last_mut() {
                 state.on_pause(engine);
             }
 
-            self.state_stack.push(state);
+            self.state_stack.push(state.into());
             let state = self.state_stack.last_mut().unwrap();
             state.on_start(engine);
         }
@@ -201,7 +207,7 @@ mod tests {
                 self.0 -= 1;
                 Trans::None
             } else {
-                Trans::Switch(Box::new(State2))
+                Trans::Switch(State2.into())
             }
         }
     }

@@ -118,7 +118,7 @@ impl<'a> Application<'a> {
 
         #[cfg(feature = "profiler")]
         profile_scope!("handle_event");
-        for e in self.events.iter() {
+        for e in self.events.try_iter() {
             self.states.handle_event(engine, e);
         }
 
