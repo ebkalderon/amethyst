@@ -3,7 +3,7 @@
 extern crate amethyst;
 
 use amethyst::prelude::*;
-use amethyst::ecs::systems::TransformSystem;
+use amethyst::ecs::systems::{RenderingSystem, TransformSystem};
 
 struct Example;
 
@@ -25,7 +25,8 @@ fn main() {
                        env!("CARGO_MANIFEST_DIR"));
     let cfg = Config::from_file(path).unwrap();
     let mut game = Application::build(Example, cfg)
-        .with_system::<TransformSystem>("trans", 0)
+        .with_components(|w| TransformSystem::register(w))
+        .with_systems(|p| p.add_system(TransformSystem::default(), "trans", 0))
         .finish()
         .expect("Fatal error");
 

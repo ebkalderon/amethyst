@@ -1,7 +1,7 @@
 //! The core engine framework.
 
 use config::Config;
-use ecs::{Gate, Planner, Priority, World};
+use ecs::{Component, Gate, Planner, Priority, World};
 use ecs::systems::SystemExt;
 use error::{Error, Result};
 use event::{EventReceiver, EventSender};
@@ -27,17 +27,6 @@ pub struct Engine {
 }
 
 impl Engine {
-    /// Creates a new `Engine` handle from the given inputs.
-    #[doc(hidden)]
-    pub fn new(cfg: Config, plan: Planner<()>, pool: Arc<ThreadPool>) -> Engine {
-        Engine {
-            config: cfg,
-            planner: plan,
-            pool: pool,
-            time: Time::default(),
-        }
-    }
-
     /// Spawns a parallel task in the engine threadpool.
     pub fn spawn_task<R, T: FnOnce() -> R + Send> (&self, task: T) -> R {
         self.pool.install(task)
@@ -61,25 +50,26 @@ impl Engine {
 
 /// User-friendly facade for building games. Manages main loop.
 #[derive(Debug)]
-pub struct Application<'a> {
+pub struct Application<'s> {
     engine: Engine,
     events: EventReceiver,
-    states: StateMachine<'a>,
+    states: StateMachine<'s>,
     timer: Stopwatch,
 }
 
-impl<'a> Application<'a> {
+impl<'s> Application<'s> {
     /// Creates a new Application with the given initial game state.
-    pub fn new<S: State + 'a>(initial_state: S) -> Result<Application<'a>> {
+    pub fn new<S: State + 's>(initial_state: S) -> Result<Application<'s>> {
         use ecs::systems::TransformSystem;
         ApplicationBuilder::new(initial_state, Config::default())
-            .with_system::<TransformSystem>("trans", 0)
+            .with_components(|w| TransformSystem::register(w))
+            .with_systems(|p| p.add_system(TransformSystem::default(), "trans", 0))
             .finish()
     }
 
     /// Builds a new application using builder pattern.
     pub fn build<S>(initial_state: S, cfg: Config) -> ApplicationBuilder<S>
-        where S: State + 'a
+        where S: State + 's
     {
         ApplicationBuilder::new(initial_state, cfg)
     }
@@ -141,7 +131,7 @@ impl<'a> Application<'a> {
 }
 
 #[cfg(feature = "profiler")]
-impl<'a> Drop for Application<'a> {
+impl<'s> Drop for Application<'s> {
     fn drop(&mut self) {
         // TODO: Specify filename in config.
         let path = format!("{}/thread_profile.json", env!("CARGO_MANIFEST_DIR"));
@@ -151,68 +141,82 @@ impl<'a> Drop for Application<'a> {
 
 /// Helper builder for Applications.
 pub struct ApplicationBuilder<T: State>{
+    add_comps: Box<Fn(&mut World)>,
+    add_systems: Box<Fn(&mut Planner<()>)>,
     config: Config,
-    errors: Vec<Error>,
+    event_recv: EventReceiver,
+    event_send: EventSender,
     initial_state: T,
-    planner: Planner<()>,
-    pool: Arc<ThreadPool>,
-    recv: EventReceiver,
-    send: EventSender,
+    world: World,
 }
 
-impl<'a, T: State + 'a> ApplicationBuilder<T> {
+impl<'s, T: State + 's> ApplicationBuilder<T> {
     /// Creates a new ApplicationBuilder with the given initial game state and
     /// display configuration.
     pub fn new(initial_state: T, cfg: Config) -> Self {
-        use num_cpus;
-        use rayon::Configuration;
-        use std::sync::mpsc;
+        use std::sync::mpsc::channel;
 
-        let num_cores = num_cpus::get();
-        let pool_cfg = Configuration::new().num_threads(num_cores);
-        let pool = ThreadPool::new(pool_cfg).map(|p| Arc::new(p)).unwrap();
-        let (send, recv) = mpsc::channel();
+        let (send, recv) = channel();
 
         ApplicationBuilder {
+            add_comps: Box::new(|w| {}),
+            add_systems: Box::new(|p| {}),
             config: cfg,
-            errors: Vec::new(),
+            event_recv: recv,
+            event_send: send,
             initial_state: initial_state,
-            planner: Planner::from_pool(World::new(), pool.clone()),
-            pool: pool,
-            recv: recv,
-            send: send,
+            world: World::new(),
         }
+    }
+
+    /// Registers a set of component types to be used in the game.
+    pub fn with_components<F>(mut self, f: F) -> Self
+        where F: Fn(&mut World) + 'static
+    {
+        self.add_comps = Box::new(f);
+        self
     }
 
     /// Adds a given system `sys`, assigns it the string identifier `name`,
     /// and marks it with the runtime priority `pri`.
-    pub fn with_system<S>(mut self, name: &str, pri: Priority) -> Self
-        where S: SystemExt + 'static
+    pub fn with_systems<F>(mut self, f: F) -> Self
+        where F: Fn(&mut Planner<()>) + 'static
     {
-        S::register(self.planner.mut_world());
-        match S::build(&self.config, self.send.clone()) {
-            Ok(sys) => self.planner.add_system(sys, name.into(), pri),
-            Err(e) => self.errors.push(e),
-        }
-
+        self.add_systems = Box::new(f);
         self
     }
 
     /// Builds the Application and returns the result.
-    pub fn finish(self) -> Result<Application<'a>> {
+    pub fn finish(self) -> Result<Application<'s>> {
+        use num_cpus;
+        use rayon::Configuration;
+
         #[cfg(feature = "profiler")]
         register_thread_with_profiler("Main".into());
         #[cfg(feature = "profiler")]
         profile_scope!("new");
 
-        match self.errors.last() {
-            Some(_) => Err(Error::Application),
-            None => Ok(Application {
-                engine: Engine::new(self.config, self.planner, self.pool),
-                events: self.recv,
-                states: StateMachine::new(self.initial_state),
-                timer: Stopwatch::new(),
-            })
-        }
+        let num_cores = num_cpus::get();
+        let pool_cfg = Configuration::new().num_threads(num_cores);
+        let pool = ThreadPool::new(pool_cfg).map(|p| Arc::new(p)).unwrap();
+
+        let mut world = self.world;
+        (*self.add_comps)(&mut world);
+        let mut planner = Planner::from_pool(world, pool.clone());
+        (*self.add_systems)(&mut planner);
+
+        let engine = Engine {
+            config: self.config,
+            planner: planner,
+            pool: pool,
+            time: Time::default(),
+        };
+
+        Ok(Application {
+            engine: engine,
+            events: self.event_recv,
+            states: StateMachine::new(self.initial_state),
+            timer: Stopwatch::new(),
+        })
     }
 }

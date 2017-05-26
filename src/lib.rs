@@ -23,7 +23,7 @@
 //!         println!("Starting game!");
 //!     }
 //!
-//!     fn handle_event(&mut self, _: &mut Engine, event: &Event) -> Trans {
+//!     fn handle_event(&mut self, _: &mut Engine, event: Event) -> Trans {
 //!         match event {
 //!             Event::Window(e) => match e {
 //!                 WindowEvent::KeyboardInput(_, _, Some(Key::Escape), _) |
@@ -65,6 +65,7 @@ extern crate specs;
 extern crate ticketed_lock;
 extern crate wavefront_obj;
 extern crate winit;
+extern crate glutin;
 
 #[cfg(feature="profiler")]
 #[macro_use]

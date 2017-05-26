@@ -4,7 +4,7 @@
 extern crate amethyst;
 extern crate cgmath;
 
-use amethyst::{Application, ElementState, Event, State, Trans, VirtualKeyCode, WindowEvent};
+use amethyst::prelude::*;
 use amethyst::asset_manager::{AssetManager, DirectoryStore};
 use amethyst::config::Element;
 use amethyst::ecs::{Join, System, RunArg, World};
@@ -17,6 +17,7 @@ use cgmath::{Deg, Euler, Quaternion};
 use std::env::set_var;
 use std::str;
 
+#[derive(Debug)]
 struct DemoState {
     light_angle: f32,
     light_color: [f32; 4],

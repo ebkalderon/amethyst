@@ -265,7 +265,8 @@ fn init_backend(wb: WindowBuilder, el: &EventsLoop) -> Result<Backend> {
 
     let wb = glutin::WindowBuilder::from_winit_builder(wb)
         .with_gl_profile(GlProfile::Core)
-        .with_gl(GlRequest::Latest);
+        .with_gl(GlRequest::Latest)
+        .with_vsync();
 
     let (win, dev, fac, color, depth) = win::init::<ColorFormat, DepthFormat>(wb, el);
     let size = win.get_inner_size_points().ok_or(Error::WindowDestroyed)?;

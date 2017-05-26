@@ -2,6 +2,7 @@
 
 pub use app::{Application, ApplicationBuilder, Engine};
 pub use config::{Config, DisplayConfig, Element};
+pub use ecs::systems::SystemExt;
 pub use error::{Error, Result};
 pub use event::*;
 pub use state::{State, Trans};
