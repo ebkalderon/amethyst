@@ -12,7 +12,7 @@ mod rendering;
 mod transform;
 
 /// Extension trait for all systems.
-pub trait SystemExt: System<()> {
+pub trait SystemExt<'a>: System<'a> {
     /// Constructs a new system with the given configuration. 
     fn build(cfg: &Config, send: EventSender) -> Result<Self> where Self: Sized;
 

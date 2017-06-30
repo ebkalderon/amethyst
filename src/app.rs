@@ -1,7 +1,7 @@
 //! The core engine framework.
 
 use config::Config;
-use ecs::{Component, Gate, Planner, Priority, World};
+use ecs::{Component, World, Dispatcher, DispatcherBuilder};
 use ecs::systems::SystemExt;
 use error::{Error, Result};
 use event::{EventReceiver, EventSender};
@@ -17,16 +17,18 @@ use thread_profiler::{register_thread_with_profiler, write_profile};
 /// User-facing engine handle.
 #[derive(Derivative)]
 #[derivative(Debug)]
-pub struct Engine {
+pub struct Engine<'a> {
     config: Config,
     #[derivative(Debug = "ignore")]
-    planner: Planner<()>,
+    dispatcher: Dispatcher<'a, 'a>,
+    #[derivative(Debug = "ignore")]
+    world: World,
     #[derivative(Debug = "ignore")]
     pool: Arc<ThreadPool>,
     time: Time,
 }
 
-impl Engine {
+impl<'a> Engine<'a> {
     /// Spawns a parallel task in the engine threadpool.
     pub fn spawn_task<R, T: FnOnce() -> R + Send> (&self, task: T) -> R {
         self.pool.install(task)
@@ -44,32 +46,32 @@ impl Engine {
 
     /// Returns a mutable reference to the world.
     pub fn world_mut(&mut self) -> &mut World {
-        self.planner.mut_world()
+        &mut self.world
     }
 }
 
 /// User-friendly facade for building games. Manages main loop.
 #[derive(Debug)]
-pub struct Application<'s> {
-    engine: Engine,
+pub struct Application<'a> {
+    engine: Engine<'a>,
     events: EventReceiver,
-    states: StateMachine<'s>,
+    states: StateMachine<'a>,
     timer: Stopwatch,
 }
 
-impl<'s> Application<'s> {
+impl<'a> Application<'a> {
     /// Creates a new Application with the given initial game state.
-    pub fn new<S: State + 's>(initial_state: S) -> Result<Application<'s>> {
+    pub fn new<S: State + 'a>(initial_state: S) -> Result<Application<'a>> {
         use ecs::systems::TransformSystem;
         ApplicationBuilder::new(initial_state, Config::default())
             .with_components(|w| TransformSystem::register(w))
-            .with_systems(|p| p.add_system(TransformSystem::default(), "trans", 0))
+            .with_systems(|p| p.add(TransformSystem::default(), "trans", &[]))
             .finish()
     }
 
     /// Builds a new application using builder pattern.
-    pub fn build<S>(initial_state: S, cfg: Config) -> ApplicationBuilder<S>
-        where S: State + 's
+    pub fn build<S>(initial_state: S, cfg: Config) -> ApplicationBuilder<'a, S>
+        where S: State + 'a
     {
         ApplicationBuilder::new(initial_state, cfg)
     }
@@ -92,7 +94,7 @@ impl<'s> Application<'s> {
         profile_scope!("initialize");
 
         let time = self.engine.time.clone();
-        self.engine.planner.mut_world().add_resource(time);
+        self.engine.world.add_resource(time);
 
         self.states.start(&mut self.engine);
     }
@@ -101,10 +103,11 @@ impl<'s> Application<'s> {
     fn advance_frame(&mut self) {
         let ref mut engine = self.engine;
 
-        let mut time = engine.planner.mut_world().write_resource::<Time>().pass();
-        time.delta_time = engine.time.delta_time;
-        time.fixed_step = engine.time.fixed_step;
-        time.last_fixed_update = engine.time.last_fixed_update;
+        let mut time = Time {
+            delta_time: engine.time.delta_time,
+            fixed_step: engine.time.fixed_step,
+            last_fixed_update: engine.time.last_fixed_update,
+        };
 
         #[cfg(feature = "profiler")]
         profile_scope!("handle_event");
@@ -118,6 +121,7 @@ impl<'s> Application<'s> {
             self.states.fixed_update(engine);
             time.last_fixed_update += time.fixed_step;
         }
+        *engine.world.write_resource::<Time>() = time;
 
         #[cfg(feature = "profiler")]
         profile_scope!("update");
@@ -125,13 +129,12 @@ impl<'s> Application<'s> {
 
         #[cfg(feature = "profiler")]
         profile_scope!("dispatch");
-        engine.planner.dispatch(());
-        engine.planner.wait();
+        engine.dispatcher.dispatch(&mut engine.world.res);
     }
 }
 
 #[cfg(feature = "profiler")]
-impl<'s> Drop for Application<'s> {
+impl<'a> Drop for Application<'a> {
     fn drop(&mut self) {
         // TODO: Specify filename in config.
         let path = format!("{}/thread_profile.json", env!("CARGO_MANIFEST_DIR"));
@@ -140,9 +143,9 @@ impl<'s> Drop for Application<'s> {
 }
 
 /// Helper builder for Applications.
-pub struct ApplicationBuilder<T: State>{
+pub struct ApplicationBuilder<'a, T: State>{
     add_comps: Box<Fn(&mut World)>,
-    add_systems: Box<Fn(&mut Planner<()>)>,
+    add_systems: Box<Fn(DispatcherBuilder<'a, 'a>) -> DispatcherBuilder<'a, 'a>>,
     config: Config,
     event_recv: EventReceiver,
     event_send: EventSender,
@@ -150,7 +153,7 @@ pub struct ApplicationBuilder<T: State>{
     world: World,
 }
 
-impl<'s, T: State + 's> ApplicationBuilder<T> {
+impl<'a, T: State + 'a> ApplicationBuilder<'a, T> {
     /// Creates a new ApplicationBuilder with the given initial game state and
     /// display configuration.
     pub fn new(initial_state: T, cfg: Config) -> Self {
@@ -160,7 +163,7 @@ impl<'s, T: State + 's> ApplicationBuilder<T> {
 
         ApplicationBuilder {
             add_comps: Box::new(|w| {}),
-            add_systems: Box::new(|p| {}),
+            add_systems: Box::new(|p| p),
             config: cfg,
             event_recv: recv,
             event_send: send,
@@ -180,14 +183,14 @@ impl<'s, T: State + 's> ApplicationBuilder<T> {
     /// Adds a given system `sys`, assigns it the string identifier `name`,
     /// and marks it with the runtime priority `pri`.
     pub fn with_systems<F>(mut self, f: F) -> Self
-        where F: Fn(&mut Planner<()>) + 'static
+        where F: Fn(DispatcherBuilder<'a, 'a>) -> DispatcherBuilder<'a, 'a> + 'static
     {
         self.add_systems = Box::new(f);
         self
     }
 
     /// Builds the Application and returns the result.
-    pub fn finish(self) -> Result<Application<'s>> {
+    pub fn finish(self) -> Result<Application<'a>> {
         use num_cpus;
         use rayon::Configuration;
 
@@ -202,12 +205,13 @@ impl<'s, T: State + 's> ApplicationBuilder<T> {
 
         let mut world = self.world;
         (*self.add_comps)(&mut world);
-        let mut planner = Planner::from_pool(world, pool.clone());
-        (*self.add_systems)(&mut planner);
+        let dispatcher_builder = DispatcherBuilder::new().with_pool(pool.clone());
+        let dispatcher_builder = (*self.add_systems)(dispatcher_builder);
 
         let engine = Engine {
             config: self.config,
-            planner: planner,
+            dispatcher: dispatcher_builder.build(),
+            world: world,
             pool: pool,
             time: Time::default(),
         };

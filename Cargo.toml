@@ -32,8 +32,8 @@ genmesh = "0.4"
 glutin = "0.8"
 imagefmt = "4.0"
 rayon = "0.7"
-# specs = "0.8"
-specs = { version = "0.8", git = "https://github.com/slide-rs/specs" }
+specs = "0.9.1"
+# specs = { version = "0.8", git = "https://github.com/slide-rs/specs" }
 thread_profiler = { version = "0.1", optional = true }
 ticketed_lock = "0.1"
 wavefront_obj = "5.0"
