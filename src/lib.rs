@@ -62,6 +62,7 @@ extern crate dds;
 extern crate derivative;
 extern crate fnv;
 extern crate genmesh;
+extern crate gfx;
 extern crate imagefmt;
 extern crate num_cpus;
 extern crate rayon;
@@ -77,7 +78,7 @@ pub use self::app::{Application, ApplicationBuilder, Engine};
 pub use self::error::{Error, Result};
 pub use self::state::{State, StateMachine, Trans};
 
-pub mod asset_manager;
+pub mod assets;
 pub mod ecs;
 pub mod event;
 pub mod prelude;

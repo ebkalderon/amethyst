@@ -1,10 +1,10 @@
 //! Scene graph system and types
 
 use cgmath::Matrix4;
-use config::Config;
+// use config::Config;
 use ecs::{Entities, Entity, Join, ReadStorage, System, WriteStorage};
 use ecs::components::{LocalTransform, Transform, Child, Init};
-use ecs::systems::SystemExt;
+// use ecs::systems::SystemExt;
 use error::Result;
 use fnv::{FnvHashMap as HashMap, FnvHashSet as HashSet};
 
@@ -152,18 +152,18 @@ impl<'a> System<'a> for TransformSystem {
     }
 }
 
-impl SystemExt for TransformSystem {
-    fn build(_: &Config) -> Result<TransformSystem> {
-        Ok(TransformSystem::default())
-    }
+// impl SystemExt for TransformSystem {
+//     fn build(_: &Config) -> Result<TransformSystem> {
+//         Ok(TransformSystem::default())
+//     }
 
-    fn register(world: &mut World) {
-        world.register::<Child>();
-        world.register::<Init>();
-        world.register::<LocalTransform>();
-        world.register::<Transform>();
-    }
-}
+//     fn register(world: &mut World) {
+//         world.register::<Child>();
+//         world.register::<Init>();
+//         world.register::<LocalTransform>();
+//         world.register::<Transform>();
+//     }
+// }
 
 #[cfg(test)]
 mod tests {

@@ -1,11 +1,9 @@
 //! The core engine framework.
 
-use asset_manager::AssetManager;
-use config::Config;
+use assets::AssetManager;
 use ecs::{Component, Dispatcher, DispatcherBuilder, System, World};
 use ecs::components::{LocalTransform, Transform, Child, Init};
-use ecs::resources::Time;
-use ecs::systems::SystemExt;
+// use ecs::systems::SystemExt;
 use error::{Error, Result};
 use rayon::{Configuration, ThreadPool};
 use state::{State, StateMachine};
@@ -15,6 +13,10 @@ use timing::{Stopwatch, Time};
 
 #[cfg(feature = "profiler")]
 use thread_profiler::{register_thread_with_profiler, write_profile};
+
+/// FIXME: Placeholder
+#[derive(Default)]
+pub struct Config;
 
 /// User-facing engine handle.
 pub struct Engine<'e> {
@@ -29,7 +31,6 @@ pub struct Engine<'e> {
 }
 
 /// User-friendly facade for building games. Manages main loop.
-#[derive(Debug)]
 pub struct Application<'a> {
     // Graphics and asset management structs.
     assets: AssetManager,
@@ -46,7 +47,6 @@ pub struct Application<'a> {
 impl<'a> Application<'a> {
     /// Creates a new Application with the given initial game state.
     pub fn new<S: State + 'static>(initial_state: S) -> Application<'a> {
-        use ecs::systems::{RenderingSystem, TransformSystem};
         ApplicationBuilder::new(initial_state, Config::default()).done()
     }
 
@@ -92,11 +92,11 @@ impl<'a> Application<'a> {
         {
             use event::Event;
 
-            let mut world = self.planner.mut_world();
-            let mut time = world.write_resource::<Time>().pass();
-            time.delta_time = self.time.delta_time;
-            time.fixed_step = self.time.fixed_step;
-            time.last_fixed_update = self.time.last_fixed_update;
+            let mut world = &mut self.world;
+            // let mut time = world.write_resource::<Time>().pass();
+            // time.delta_time = self.time.delta_time;
+            // time.fixed_step = self.time.fixed_step;
+            // time.last_fixed_update = self.time.last_fixed_update;
 
             let mut engine = Engine {
                 assets: &mut self.assets,
@@ -144,9 +144,9 @@ impl<'a> Application<'a> {
 
             {
                 let mut time = world.write_resource::<Time>();
-                time.delta_time = self.delta_time;
-                time.fixed_step = self.fixed_step;
-                time.last_fixed_update = self.last_fixed_update;
+                // time.delta_time = self.delta_time;
+                // time.fixed_step = self.fixed_step;
+                // time.last_fixed_update = self.last_fixed_update;
             }
         }
 
@@ -234,33 +234,30 @@ impl<'a, T> ApplicationBuilder<'a, T>
         self
     }
 
-    /// Builds the Application and returns the result.
+    /// builds the application and returns the result.
     pub fn done(self) -> Application<'a> {
         #[cfg(feature = "profiler")]
-        register_thread_with_profiler("Main".into());
+        register_thread_with_profiler("main".into());
         #[cfg(feature = "profiler")]
         profile_scope!("new");
 
         let mut assets = AssetManager::new();
-        // assets.add_loader::<gfx_types::Factory>(factory);
+        // assets.add_loader::<gfx_types::factory>(factory);
 
-        {
-            let time = Time {
-                delta_time: Duration::new(0, 0),
-                fixed_step: Duration::new(0, 16666666),
-                last_fixed_update: Instant::now(),
-            };
-
-            // world.add_resource::<AmbientLight>(AmbientLight::default());
-            world.add_resource::<Time>(time);
-            world.register::<Child>();
-            // world.register::<DirectionalLight>();
-            world.register::<Init>();
-            world.register::<LocalTransform>();
-            // world.register::<PointLight>();
-            // world.register::<Renderable>();
-            // world.register::<Transform>();
-        }
+        let mut world = self.world;
+        // world.add_resource::<AmbientLight>(AmbientLight::default());
+        world.add_resource(Time {
+            delta_time: Duration::new(0, 0),
+            fixed_step: Duration::new(0, 16666666),
+            last_fixed_update: Instant::now(),
+        });
+        world.register::<Child>();
+        // world.register::<DirectionalLight>();
+        world.register::<Init>();
+        world.register::<LocalTransform>();
+        // world.register::<PointLight>();
+        // world.register::<Renderable>();
+        // world.register::<Transform>();
 
         Application {
             assets: assets,
@@ -269,7 +266,7 @@ impl<'a, T> ApplicationBuilder<'a, T>
             dispatcher: self.dispatcher_builder.build(),
             time: Time::default(),
             timer: Stopwatch::new(),
-            world: self.world,
+            world: world,
         }
     }
 }

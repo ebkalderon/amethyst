@@ -1,7 +1,7 @@
 //! Color value types.
 
 use gfx::shade::{Formatted, ToUniform};
-use gfx_core::shade::{BaseType, ContainerType, UniformValue};
+use gfx::shade::core::{BaseType, ContainerType, UniformValue};
 
 /// An RGBA color value.
 #[derive(Clone, Copy, Debug, Deserialize, PartialEq, PartialOrd, Serialize)]

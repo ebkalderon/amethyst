@@ -21,13 +21,14 @@ travis-ci = { repository = "amethyst/amethyst" }
 profiler = ["thread_profiler/thread_profiler"]
 
 [dependencies]
-amethyst_renderer = { path = "src/renderer", version = "0.5" }
+amethyst_renderer = { path = "amethyst_renderer", version = "0.5" }
 cgmath = "0.14"
 dds-rs = "0.4"
 derivative = "1.0"
 fnv = "1.0"
 num_cpus = "1.2"
 genmesh = "0.4"
+gfx = "0.16"
 imagefmt = "4.0"
 rayon = "0.7"
 serde = "0.9.7"
@@ -64,4 +65,4 @@ name = "assets"
 path = "examples/05_assets/main.rs"
 
 [workspace]
-members = ["src/renderer"]
+members = ["amethyst_renderer"]
