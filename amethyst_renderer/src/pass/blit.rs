@@ -58,7 +58,7 @@ impl<'a>Into<PassBuilder<'a>> for BlitBuffer {
             .with_sampler("blit", FilterMethod::Scale, WrapMode::Clamp);
             // .with_input_target(self.target, "blit")
 
-        PassBuilder::postproc(effect, move |ref mut enc, ref out, ref effect, ref scene| {
+        PassBuilder::post(effect, move |ref mut enc, ref out, ref effect, ref scene| {
                 // let buf = if let Some(i) = buf_idx {
                 //     data.targets[0].color_buf(i).unwrap().target_view
                 // } else {

@@ -160,7 +160,7 @@ impl Renderer {
 
         for stage in pipe.stages() {
             if stage.is_enabled() {
-                // stage.apply_func(self.encoders.first_mut().unwrap());
+                stage.apply_prep(self.encoders.first_mut().unwrap());
                 {
                     let encoders = self.encoders.as_mut_slice();
                     let encoders_count = encoders.len();
@@ -169,10 +169,10 @@ impl Renderer {
                         let mut mod_par_iter = scene.par_chunks_models(encoders_count);
                         assert!(enc_par_iter.len() >= mod_par_iter.len());
                         enc_par_iter.zip(mod_par_iter)
-                            .for_each(|(enc, models)| for model in models { stage.apply(enc, model, scene) });
+                            .for_each(|(enc, models)| for model in models { stage.apply_main(enc, scene, model) });
                     });
                 }
-                // stage.apply_post(self.encoders.last_mut().unwrap(), scene);
+                stage.apply_post(self.encoders.last_mut().unwrap(), scene);
                 for enc in self.encoders.iter_mut() {
                     enc.flush(&mut self.device);
                 }

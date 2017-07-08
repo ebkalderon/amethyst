@@ -2,7 +2,7 @@
 
 use error::{Error, Result};
 use pipe::{Target, Targets};
-use pipe::pass::{Pass, PassBuilder};
+use pipe::pass::{MainPass, Pass, PassBuilder, PostPass, PrepPass};
 use scene::{Model, Scene};
 use std::sync::Arc;
 use types::{Encoder, Factory};
@@ -11,7 +11,9 @@ use types::{Encoder, Factory};
 #[derive(Clone, Debug)]
 pub struct Stage {
     enabled: bool,
-    passes: Vec<Pass>,
+    prep_passes: Vec<PrepPass>,
+    main_passes: Vec<MainPass>,
+    post_passes: Vec<PostPass>,
     target: Arc<Target>,
 }
 
@@ -38,10 +40,30 @@ impl Stage {
 
     /// Applies all passes in this stage to the given `Scene` and outputs the
     /// result to the proper target.
-    pub fn apply(&self, enc: &mut Encoder, model: &Model, scene: &Scene) {
+    pub fn apply_prep(&self, enc: &mut Encoder) {
         if self.enabled {
-            for pass in self.passes.as_slice() {
-                pass.apply(enc, model, scene, &self.target);
+            for pass in self.prep_passes.iter() {
+                pass.apply(enc, &self.target);
+            }
+        }
+    }
+
+    /// Applies all passes in this stage to the given `Scene` and outputs the
+    /// result to the proper target.
+    pub fn apply_main(&self, enc: &mut Encoder, scene: &Scene, model: &Model) {
+        if self.enabled {
+            for pass in self.main_passes.iter() {
+                pass.apply(enc, &self.target, scene, model);
+            }
+        }
+    }
+
+    /// Applies all passes in this stage to the given `Scene` and outputs the
+    /// result to the proper target.
+    pub fn apply_post(&self, enc: &mut Encoder, scene: &Scene) {
+        if self.enabled {
+            for pass in self.post_passes.iter() {
+                pass.apply(enc, &self.target, scene);
             }
         }
     }
@@ -86,14 +108,23 @@ impl<'a> StageBuilder<'a> {
             .cloned()
             .ok_or(Error::NoSuchTarget(name))?;
 
-        let passes = self.passes
-            .drain(..)
-            .map(|pb| pb.finish(fac, targets, &out))
-            .collect::<Result<_>>()?;
+        let mut prep_passes = Vec::new();
+        let mut main_passes = Vec::new();
+        let mut post_passes = Vec::new();
+
+        for pass in self.passes.into_iter().map(|pb| pb.finish(fac, targets, &out)) {
+            match pass? {
+                Pass::Prep(pass) => prep_passes.push(pass),
+                Pass::Main(pass) => main_passes.push(pass),
+                Pass::Post(pass) => post_passes.push(pass),
+            }
+        }
 
         Ok(Stage {
             enabled: self.enabled,
-            passes: passes,
+            prep_passes: prep_passes,
+            main_passes: main_passes,
+            post_passes: post_passes,
             target: out,
         })
     }

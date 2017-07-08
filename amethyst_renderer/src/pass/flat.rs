@@ -105,7 +105,7 @@ impl<'a, V> Into<PassBuilder<'a>> for &'a DrawFlat<V>
             .with_texture("albedo")
             .with_output("color", None);
 
-        PassBuilder::main(effect, move |ref mut enc, ref out, ref model, ref effect, ref scene| {
+        PassBuilder::main(effect, move |ref mut enc, ref out, ref effect, ref scene, ref model| {
             let vertex_args = scene.active_camera().map(|cam| VertexArgs {
                 proj: cam.proj.into(),
                 view: Matrix4::look_at(cam.eye, cam.eye + cam.forward, cam.up).into(),
