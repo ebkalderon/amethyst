@@ -17,12 +17,12 @@ pub struct Stage {
 
 impl Stage {
     /// Creates a new stage using the Target with the given name.
-    pub fn with_target<T: Into<String>>(target_name: T) -> StageBuilder {
+    pub fn with_target<'a, T: Into<String>>(target_name: T) -> StageBuilder<'a> {
         StageBuilder::new(target_name.into())
     }
 
     /// Creates a new layer which draws straight into the backbuffer.
-    pub fn with_backbuffer() -> StageBuilder {
+    pub fn with_backbuffer<'a>() -> StageBuilder<'a> {
         StageBuilder::new("")
     }
 
@@ -49,13 +49,13 @@ impl Stage {
 
 /// Constructs a new rendering stage.
 #[derive(Clone, Debug)]
-pub struct StageBuilder {
+pub struct StageBuilder<'a> {
     enabled: bool,
-    passes: Vec<PassBuilder>,
+    passes: Vec<PassBuilder<'a>>,
     target_name: String,
 }
 
-impl StageBuilder {
+impl<'a> StageBuilder<'a> {
     /// Creates a new `StageBuilder` using the given target.
     pub fn new<T: Into<String>>(target_name: T) -> Self {
         StageBuilder {
@@ -66,7 +66,7 @@ impl StageBuilder {
     }
 
     /// Appends another `Pass` to the stage.
-    pub fn with_pass<P: Into<PassBuilder>>(mut self, pass: P) -> Self {
+    pub fn with_pass<P: Into<PassBuilder<'a>>>(mut self, pass: P) -> Self {
         self.passes.push(pass.into());
         self
     }

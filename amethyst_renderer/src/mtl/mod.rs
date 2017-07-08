@@ -52,7 +52,7 @@ impl MaterialBuilder {
     /// Creates a new material builder.
     pub fn new() -> Self {
         MaterialBuilder {
-            albedo: TextureKind::Constant([0.0, 0.0, 0.0, 1.0].into()),
+            albedo: TextureKind::Constant([0.0, 0.0, 0.5, 1.0].into()),
             emission: TextureKind::Constant([0.0; 4].into()),
             metallic: TextureKind::Constant([0.0; 4].into()),
             normal: TextureKind::Constant([0.0, 0.0, 1.0, 1.0].into()),

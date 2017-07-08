@@ -3,7 +3,7 @@ use gfx::pso::{DataBind, DataLink, Descriptor, PipelineData, PipelineInit, InitE
 use gfx::pso::buffer::{RawConstantBuffer, RawGlobal, RawVertexBuffer};
 use gfx::pso::resource::{RawShaderResource, Sampler};
 use gfx::pso::target;
-use gfx::shade::core::ProgramInfo;
+use gfx::shade::core::{BaseType, ContainerType, OutputVar, ProgramInfo};
 use types::{ColorFormat, DepthFormat, Resources};
 
 type AccessInfo = pso::AccessInfo<Resources>;
@@ -64,6 +64,23 @@ impl<'d> PipelineInit for Init<'d> {
                 let d = res.map_err(|e| InitError::PixelExport(info.name.as_str(), Some(e)))?;
                 meta.out_colors.push(meta_color);
                 desc.color_targets[info.slot as usize] = Some(d);
+            }
+        }
+        if !info.knows_outputs {
+            let mut info = OutputVar {
+                name: String::new(),
+                slot: 0,
+                base_type: BaseType::F32,
+                container: ContainerType::Vector(4),
+            };
+            for color in self.out_colors.iter() {
+                let mut meta_color = <RenderTarget as DataLink<'d>>::new();
+                if let Some(res) = meta_color.link_output(&info, color) {
+                    let d = res.map_err(|e| InitError::PixelExport("", Some(e)))?;
+                    meta.out_colors.push(meta_color);
+                    desc.color_targets[info.slot as usize] = Some(d);
+                    info.slot += 1;
+                }
             }
         }
 

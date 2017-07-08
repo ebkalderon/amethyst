@@ -146,25 +146,37 @@ impl Renderer {
         tb.finish(&mut self.factory)
     }
 
+    /// Builds a new material resource.
+    pub fn create_material(&mut self, mb: MaterialBuilder) -> Result<Material> {
+        mb.finish(&mut self.factory)
+    }
+
     /// Draws a scene with the given pipeline.
     pub fn draw(&mut self, scene: &Scene, pipe: &Pipeline, _delta: Duration) {
         use gfx::Device;
         use rayon::prelude::*;
 
-        for stage in pipe.stages() {
-            assert_eq!(self.encoders.len(), num_cpus::get());
-            let encoders = self.encoders.as_mut_slice();
-            if stage.is_enabled() {
-                self.pool.install(|| {
-                    scene.par_iter_models()
-                        .zip(encoders)
-                        .for_each(|(model, enc)| stage.apply(enc, model, scene));
-                });
-            }
-        }
+        assert_eq!(self.encoders.len(), num_cpus::get());
 
-        for enc in self.encoders.iter_mut() {
-            enc.flush(&mut self.device);
+        for stage in pipe.stages() {
+            if stage.is_enabled() {
+                // stage.apply_func(self.encoders.first_mut().unwrap());
+                {
+                    let encoders = self.encoders.as_mut_slice();
+                    let encoders_count = encoders.len();
+                    self.pool.install(|| {
+                        let mut enc_par_iter = encoders.into_par_iter();
+                        let mut mod_par_iter = scene.par_chunks_models(encoders_count);
+                        assert!(enc_par_iter.len() >= mod_par_iter.len());
+                        enc_par_iter.zip(mod_par_iter)
+                            .for_each(|(enc, models)| for model in models { stage.apply(enc, model, scene) });
+                    });
+                }
+                // stage.apply_post(self.encoders.last_mut().unwrap(), scene);
+                for enc in self.encoders.iter_mut() {
+                    enc.flush(&mut self.device);
+                }
+            }
         }
 
         self.device.cleanup();

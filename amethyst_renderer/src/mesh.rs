@@ -59,7 +59,7 @@ impl<'v> MeshBuilder<'v> {
         use gfx::memory::cast_slice;
 
         MeshBuilder {
-            attrs: V::attributes(),
+            attrs: V::attributes().as_ref().to_vec(),
             prim: Primitive::TriangleList,
             stride: V::size(),
             transform: Matrix4::identity(),

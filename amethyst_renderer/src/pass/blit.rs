@@ -50,8 +50,8 @@ impl BlitBuffer {
     }
 }
 
-impl Into<PassBuilder> for BlitBuffer {
-    fn into(self) -> PassBuilder {
+impl<'a>Into<PassBuilder<'a>> for BlitBuffer {
+    fn into(self) -> PassBuilder<'a> {
         use gfx::texture::{FilterMethod, WrapMode};
 
         let effect = Effect::new_simple_prog(VERT_SRC, FRAG_SRC)
