@@ -50,12 +50,14 @@ impl BlitBuffer {
     }
 }
 
+static SAMPLER_NAMES: [&'static str; 1] = ["blit"];
+
 impl<'a>Into<PassBuilder<'a>> for BlitBuffer {
     fn into(self) -> PassBuilder<'a> {
         use gfx::texture::{FilterMethod, WrapMode};
 
         let effect = Effect::new_simple_prog(VERT_SRC, FRAG_SRC)
-            .with_sampler("blit", FilterMethod::Scale, WrapMode::Clamp);
+            .with_sampler(&SAMPLER_NAMES, FilterMethod::Scale, WrapMode::Clamp);
             // .with_input_target(self.target, "blit")
 
         PassBuilder::post(effect, move |ref mut enc, ref out, ref effect, ref scene| {

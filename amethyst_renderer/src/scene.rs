@@ -48,6 +48,11 @@ impl Scene {
         self.cameras.push(camera.into());
     }
 
+    /// Get all lights on scene
+    pub fn lights(&self) -> &[Light] {
+        &self.lights
+    }
+
     /// Iterates through all stored lights in parallel.
     pub fn par_iter_lights(&self) -> Lights {
         use rayon::prelude::*;

@@ -15,9 +15,9 @@ pub struct Texture {
 
 impl Texture {
     /// Builds a new texture with the given raw texture data.
-    pub fn build<'d, T: 'd, D>(data: D) -> TextureBuilder
+    pub fn build<T, D>(data: D) -> TextureBuilder
         where T: Copy + Pod,
-              D: Into<&'d [T]>
+              D: AsRef<[T]>
     {
         TextureBuilder::new(data)
     }
@@ -42,9 +42,9 @@ pub struct TextureBuilder {
 
 impl TextureBuilder {
     /// Creates a new `TextureBuilder` with the given raw texture data.
-    pub fn new<'d, T: 'd, D>(data: D) -> TextureBuilder
+    pub fn new<T, D>(data: D) -> TextureBuilder
         where T: Copy + Pod,
-              D: Into<&'d [T]>
+              D: AsRef<[T]>
     {
         use gfx::{SHADER_RESOURCE, Bind};
         use gfx::format::SurfaceType;
@@ -52,7 +52,7 @@ impl TextureBuilder {
         use gfx::texture::{AaMode, Kind};
 
         TextureBuilder {
-            data: cast_slice(data.into()).to_vec(),
+            data: cast_slice(data.as_ref()).to_vec(),
             info: Info {
                 kind: Kind::D2(1, 1, AaMode::Single),
                 levels: 1,

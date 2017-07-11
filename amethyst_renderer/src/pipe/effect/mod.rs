@@ -36,13 +36,13 @@ pub enum DepthMode {
 }
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
-enum ProgramSource {
-    Simple(&'static [u8], &'static [u8]),
-    Geometry(&'static [u8], &'static [u8], &'static [u8]),
-    Tessellated(&'static [u8], &'static [u8], &'static [u8], &'static [u8]),
+enum ProgramSource<'a> {
+    Simple(&'a [u8], &'a [u8]),
+    Geometry(&'a [u8], &'a [u8], &'a [u8]),
+    Tessellated(&'a [u8], &'a [u8], &'a [u8], &'a [u8]),
 }
 
-impl ProgramSource {
+impl<'a> ProgramSource<'a> {
     pub fn compile(&self, fac: &mut Factory) -> Result<ShaderSet<Resources>> {
         use gfx::Factory;
         use gfx::traits::FactoryExt;
@@ -83,19 +83,19 @@ pub struct Effect {
 
 impl Effect {
     pub fn new_simple_prog<'a, S>(vs: S, ps: S) -> EffectBuilder<'a>
-        where S: Into<&'static [u8]>
+        where S: Into<&'a [u8]>
     {
         EffectBuilder::new_simple_prog(vs, ps)
     }
 
     pub fn new_geom_prog<'a, S>(vs: S, gs: S, ps: S) -> EffectBuilder<'a>
-        where S: Into<&'static [u8]>
+        where S: Into<&'a [u8]>
     {
         EffectBuilder::new_geom_prog(vs, gs, ps)
     }
 
     pub fn new_tess_prog<'a, S>(vs: S, hs: S, ds: S, ps: S) -> EffectBuilder<'a>
-        where S: Into<&'static [u8]>
+        where S: Into<&'a [u8]>
     {
         EffectBuilder::new_tess_prog(vs, hs, ds, ps)
     }
@@ -105,10 +105,10 @@ impl Effect {
 pub struct EffectBuilder<'a> {
     init: Init<'a>,
     prim: Primitive,
-    prog: ProgramSource,
+    prog: ProgramSource<'a>,
     rast: Rasterizer,
-    samplers: HashMap<String, SamplerInfo>,
-    const_bufs: HashMap<String, BufferInfo>,
+    samplers: HashMap<SamplerInfo, &'a [&'a str]>,
+    const_bufs: HashMap<&'a str, BufferInfo>,
 }
 
 impl<'a> Default for EffectBuilder<'a> {
@@ -129,7 +129,7 @@ impl<'a> Default for EffectBuilder<'a> {
 
 impl<'a> EffectBuilder<'a> {
     pub fn new_simple_prog<S>(vs: S, ps: S) -> Self
-        where S: Into<&'static [u8]>
+        where S: Into<&'a [u8]>
     {
         let (vs, ps) = (vs.into(), ps.into());
         EffectBuilder {
@@ -139,7 +139,7 @@ impl<'a> EffectBuilder<'a> {
     }
 
     pub fn new_geom_prog<S>(vs: S, gs: S, ps: S) -> Self
-        where S: Into<&'static [u8]>
+        where S: Into<&'a [u8]>
     {
         let (vs, gs, ps) = (vs.into(), gs.into(), ps.into());
         EffectBuilder {
@@ -149,7 +149,7 @@ impl<'a> EffectBuilder<'a> {
     }
 
     pub fn new_tess_prog<S>(vs: S, hs: S, ds: S, ps: S) -> Self
-        where S: Into<&'static [u8]>
+        where S: Into<&'a [u8]>
     {
         let (vs, hs, ds, ps) = (vs.into(), hs.into(), ds.into(), ps.into());
         EffectBuilder {
@@ -167,7 +167,7 @@ impl<'a> EffectBuilder<'a> {
     /// Adds a raw uniform constant to this `Effect`.
     /// Requests a new constant buffer to be created
     pub fn with_raw_constant_buffer(mut self, name: &'a str, size: usize, num: usize) -> Self {
-        self.const_bufs.insert(name.to_string(), BufferInfo {
+        self.const_bufs.insert(name.into(), BufferInfo {
             role: BufferRole::Constant,
             bind: Bind::empty(),
             usage: Usage::Dynamic,
@@ -193,10 +193,10 @@ impl<'a> EffectBuilder<'a> {
     }
 
     /// Requests a new texture sampler be created for this `Effect`.
-    pub fn with_sampler(mut self, name: &'a str, f: FilterMethod, w: WrapMode) -> Self
+    pub fn with_sampler(mut self, names: &'a [&'a str], f: FilterMethod, w: WrapMode) -> Self
     {
-        self.samplers.insert(name.to_string(), SamplerInfo::new(f, w));
-        self.init.samplers.push(name);
+        self.samplers.insert(SamplerInfo::new(f, w), names);
+        self.init.samplers.extend(names);
         self
     }
 
@@ -223,13 +223,16 @@ impl<'a> EffectBuilder<'a> {
         let samplers = self.samplers
             .clone()
             .iter()
-            .map(|(name, info)| (name.clone(), fac.create_sampler(*info)))
+            .flat_map(|(info, names)| {
+                let sampler = fac.create_sampler(*info);
+                names.iter().map(move |name| ((*name).into(), sampler.clone()))
+            })
             .collect::<HashMap<_, _>>();
 
         let const_bufs = self.const_bufs
             .clone()
             .iter()
-            .map(|(name, info)| Ok((name.clone(), fac.create_buffer_raw(*info)?)))
+            .map(|(name, info)| Ok(((*name).into(), fac.create_buffer_raw(*info)?)))
             .collect::<Result<HashMap<_, _>>>()?;
 
         Ok(Effect {

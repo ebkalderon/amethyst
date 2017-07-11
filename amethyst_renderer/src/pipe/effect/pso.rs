@@ -42,8 +42,10 @@ impl<'d> PipelineInit for Init<'d> {
         let mut meta = Meta::default();
 
         for (info, cbuf) in info.constant_buffers.iter().zip(&self.const_bufs) {
+            // println!("Link constant {:?}/{:?}", info.name, cbuf);
             let mut meta_cbuf = <RawConstantBuffer as DataLink<'d>>::new();
             if let Some(res) = meta_cbuf.link_constant_buffer(info, cbuf) {
+                // println!("Linked {:?}", res);
                 let d = res.map_err(|e| InitError::ConstantBuffer(info.name.as_str(), Some(e)))?;
                 meta.const_bufs.push(meta_cbuf);
                 desc.constant_buffers[info.slot as usize] = Some(d);
@@ -51,8 +53,10 @@ impl<'d> PipelineInit for Init<'d> {
         }
 
         for (info, global) in info.globals.iter().zip(&self.globals) {
+            // println!("Link global {:?}/{:?}", info.name, global);
             let mut meta_global = <RawGlobal as DataLink<'d>>::new();
             if let Some(res) = meta_global.link_global_constant(info, global) {
+                // println!("Linked {:?}", res);
                 res.map_err(|e| InitError::GlobalConstant(info.name.as_str(), Some(e)))?;
                 meta.globals.push(meta_global);
             }
@@ -94,16 +98,20 @@ impl<'d> PipelineInit for Init<'d> {
         }
 
         for (info, smp) in info.samplers.iter().zip(&self.samplers) {
+            // println!("Link sampler {:?}/{:?}", info, smp);
             let mut meta_smp = <Sampler as DataLink<'d>>::new();
             if let Some(d) = meta_smp.link_sampler(info, smp) {
+                // println!("Linked {:?}", d);
                 meta.samplers.push(meta_smp);
                 desc.samplers[info.slot as usize] = Some(d);
             }
         }
 
         for (info, tex) in info.textures.iter().zip(&self.textures) {
+            // println!("Link texture {:?}/{:?}", info, tex);
             let mut meta_tex = <RawShaderResource as DataLink<'d>>::new();
             if let Some(res) = meta_tex.link_resource_view(info, tex) {
+                // println!("Linked {:?}", res);
                 let d = res.map_err(|_| InitError::ResourceView(info.name.as_str(), Some(())))?;
                 meta.textures.push(meta_tex);
                 desc.resource_views[info.slot as usize] = Some(d);
