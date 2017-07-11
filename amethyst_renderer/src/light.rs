@@ -83,7 +83,7 @@ impl Default for PointLight {
         PointLight {
             center: Point3::new(0.0, 0.0, 0.0),
             color: Rgba::default(),
-            intensity: 100.0,
+            intensity: 10.0,
             radius: 10.0,
             smoothness: 4.0,
         }
