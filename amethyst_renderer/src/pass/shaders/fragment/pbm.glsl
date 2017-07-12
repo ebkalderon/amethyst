@@ -64,18 +64,27 @@ float normal_distribution(vec3 N, vec3 H, float a) {
 void main() {
     vec3 albedo             = texture(sampler_albedo, vertex.tex_coord).rgb;
     vec3 emission           = texture(sampler_emission, vertex.tex_coord).rgb; // TODO: Use emission
+    vec3 normal             = texture(sampler_normal, vertex.tex_coord).rgb;
     float metallic          = texture(sampler_metallic, vertex.tex_coord).r;
     float roughness         = texture(sampler_roughness, vertex.tex_coord).r;
     float ambient_occlusion = texture(sampler_ambient_occlusion, vertex.tex_coord).r;
     float caveat            = texture(sampler_caveat, vertex.tex_coord).r;
 
-    float roughness2 = roughness * roughness;
+    // gamma correction
+    normal = pow(normal, vec3(1.0/2.33));
 
+    // normal conversion
+    normal = normal * 2 - 1;
+
+    float roughness2 = roughness * roughness;
     vec3 fresnel_base = mix(vec3(0.04), albedo, metallic);
 
-    // vec3 normal = magic(vertex.normal, texture(sampler_normal, tex_coord))
-    // TODO: Calculate normals from vertex normal and normal/tangent map
-    vec3 normal = normalize(vertex.normal);
+    vec3 vertex_normal = normalize(vertex.normal);
+    vec3 vertex_tangent = normalize(vertex.tangent - vertex_normal * dot(vertex_normal, vertex.tangent));
+    vec3 vertex_bitangent = normalize(cross(vertex_normal, vertex_tangent));
+    mat3 vertex_basis = mat3(vertex_tangent, vertex_bitangent, vertex_normal);
+    normal = normalize(vertex_basis * normal);
+
 
     vec3 lighted = vec3(0.0);
     for (int i = 0; i < point_light_count; i++) {

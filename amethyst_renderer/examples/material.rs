@@ -12,7 +12,7 @@ use genmesh::{MapToVertices, Triangulate, Vertices};
 use genmesh::generators::SphereUV;
 use glutin::EventsLoop;
 use renderer::prelude::*;
-use renderer::vertex::PosNormTex;
+use renderer::vertex::PosNormTangTex;
 use std::time::{Duration, Instant};
 use winit::ElementState::Pressed;
 use winit::{Event, WindowEvent};
@@ -25,9 +25,8 @@ fn main() {
         Pipeline::forward()
             .with_stage(
                 Stage::with_backbuffer()
-                    .with_pass(pass::ClearTarget::with_values([0.02, 0.02, 0.02, 1.0], Some(2.0)))
-                    // .with_pass(&pass::DrawFlat::<PosNormTex>::new())
-                    .with_pass(&pass::DrawShaded::<PosNormTex>::new())
+                    .with_pass(pass::ClearTarget::with_values([0.0, 0.0, 0.0, 1.0], Some(2.0)))
+                    .with_pass(&pass::DrawShaded::<PosNormTangTex>::new())
             )
     ).expect("Pipeline create");
 
@@ -38,17 +37,20 @@ fn main() {
     // let tex = renderer.create_texture(Texture::build(&bytes)).unwrap();
 
     let mut scene = Scene::default();
-
+    let alb = renderer.create_texture(Texture::from_color_val([1.0; 4])).expect("Texture create");
+            
     for i in 0..5 {
         for j in 0..5 {
             let roughness = (1.0f32 * (i as f32 / 4.0f32));
             let metallic = (1.0f32 * (j as f32 / 4.0f32));
             let pos = Matrix4::from_translation([2.0f32 * (i - 2) as f32, 2.0f32 * (j - 2) as f32, 0.0].into()) * Matrix4::from_scale(0.8);
 
-            let alb = renderer.create_texture(Texture::from_color_val([1.0; 4])).expect("Texture create");
             let rog = renderer.create_texture(Texture::from_color_val([roughness; 4])).expect("Texture create");
             let met = renderer.create_texture(Texture::from_color_val([metallic; 4])).expect("Texture create");
-            let mtl = renderer.create_material(MaterialBuilder::new().with_albedo(&alb).with_roughness(&rog).with_metallic(&met)).expect("Material create");
+            let mtl = renderer.create_material(MaterialBuilder::new()
+                .with_albedo(&alb)
+                .with_roughness(&rog)
+                .with_metallic(&met)).expect("Material create");
             let model = Model { mesh: mesh.clone(), material: mtl, pos: pos };
             scene.add_model(model);
         }
@@ -94,12 +96,16 @@ fn main() {
     });
 }
 
-fn gen_sphere(u: usize, v: usize) -> Vec<PosNormTex> {
+fn gen_sphere(u: usize, v: usize) -> Vec<PosNormTangTex> {
     SphereUV::new(u, v)
         .vertex(|(x, y, z)| {
-            PosNormTex {
+            let normal = Vector3::from([x, y, z]).normalize();
+            let up = Vector3::from([0.0, 1.0, 0.0]);
+            let tangent = normal.cross(up).cross(normal);
+            PosNormTangTex {
                 a_position: [x, y, z],
-                a_normal: Vector3::from([x, y, z]).normalize().into(),
+                a_normal: normal.into(),
+                a_tangent: tangent.into(),
                 a_tex_coord: [0.1, 0.1],
             }
         })

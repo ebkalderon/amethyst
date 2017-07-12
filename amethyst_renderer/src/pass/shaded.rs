@@ -10,21 +10,18 @@ use pipe::pass::PassBuilder;
 use pipe::{Effect, DepthMode};
 use std::any::{Any, TypeId};
 use std::mem::{self, transmute};
-use vertex::{AttributeNames, Color, Normal, Position, PosNormTex, TextureCoord, VertexFormat};
+use vertex::{AttributeNames, Color, Normal, Position, Tangent, TextureCoord, VertexFormat};
 use light::{DirectionalLight, Light, PointLight};
 use scene::Scene;
 use std::io::Read;
 
 static VERT_SRC: &'static [u8] = include_bytes!("shaders/vertex/basic.glsl");
-
-
-//pub static FRAG_SRC: &'static [u8] = include_bytes!("shaders/fragment/pbm.glsl");
+static FRAG_SRC: &'static [u8] = include_bytes!("shaders/fragment/pbm.glsl");
 
 /// Draw mesh without lighting
 #[derive(Clone, Debug, PartialEq)]
 pub struct DrawShaded<V: VertexFormat> {
     named_vertex_attributes: V::NamedAttributes,
-    fragment_shader: Vec<u8>,
 }
 
 impl<V> AttributeNames for DrawShaded<V>
@@ -34,6 +31,7 @@ impl<V> AttributeNames for DrawShaded<V>
         match TypeId::of::<A>() {
             t if t == TypeId::of::<Position>() => "position",
             t if t == TypeId::of::<Normal>() => "normal",
+            t if t == TypeId::of::<Tangent>() => "tangent",
             t if t == TypeId::of::<TextureCoord>() => "tex_coord",
             _ => "", // Unused attribute
         }
@@ -47,23 +45,18 @@ impl<V> DrawShaded<V>
     pub fn new() -> Self {
         DrawShaded {
             named_vertex_attributes: V::named_attributes::<Self>(),
-            fragment_shader: {
-                let mut data = Vec::new();
-                ::std::fs::File::open("src/pass/shaders/fragment/pbm.glsl").unwrap().read_to_end(&mut data).unwrap();
-                data
-            }
         }
     }
 }
 
 static SAMPLER_NAMES: [&'static str; 7] = [
-    "sampler_albedo",
+    "sampler_roughness",
+    "sampler_caveat",
+    "sampler_metallic",
+    "sampler_ambient_occlusion",
     "sampler_emission",
     "sampler_normal",
-    "sampler_metallic",
-    "sampler_roughness",
-    "sampler_ambient_occlusion",
-    "sampler_caveat",
+    "sampler_albedo",
 ];
 
 
@@ -104,8 +97,8 @@ impl<'a, V> Into<PassBuilder<'a>> for &'a DrawShaded<V>
         };
         unsafe impl Pod for DirectionalLight {}
 
-        let effect = Effect::new_simple_prog(VERT_SRC, &self.fragment_shader)
-            .with_raw_vertex_buffer(self.named_vertex_attributes.as_ref(), PosNormTex::size() as ElemStride, 0)
+        let effect = Effect::new_simple_prog(VERT_SRC, &FRAG_SRC)
+            .with_raw_vertex_buffer(self.named_vertex_attributes.as_ref(), V::size() as ElemStride, 0)
             .with_raw_constant_buffer("VertexArgs", mem::size_of::<VertexArgs>(), 1)
             .with_raw_constant_buffer("FragmentArgs", mem::size_of::<FragmentArgs>(), 1)
             .with_raw_constant_buffer("PointLights", mem::size_of::<PointLight>(), 512)
@@ -116,11 +109,11 @@ impl<'a, V> Into<PassBuilder<'a>> for &'a DrawShaded<V>
             .with_texture("sampler_roughness")
             .with_texture("sampler_caveat")
             .with_texture("sampler_metallic")
-            .with_texture("sampler_emission")
             .with_texture("sampler_ambient_occlusion")
-            .with_texture("sampler_albedo")
+            .with_texture("sampler_emission")
             .with_texture("sampler_normal")
-            .with_output("out_color", None);
+            .with_texture("sampler_albedo")
+            .with_output("out_color", Some(DepthMode::LessEqualWrite));
 
         PassBuilder::main(effect, move |ref mut enc, ref out, ref effect, ref scene, ref model| {
             
@@ -191,22 +184,23 @@ impl<'a, V> Into<PassBuilder<'a>> for &'a DrawShaded<V>
                 data.samplers.push(effect.samplers["sampler_metallic"].clone());
                 data.textures.push(model.material.metallic.view().clone());
                 
+                data.samplers.push(effect.samplers["sampler_ambient_occlusion"].clone());
+                data.textures.push(model.material.ambient_occlusion.view().clone());
+                
                 data.samplers.push(effect.samplers["sampler_emission"].clone());
                 data.textures.push(model.material.emission.view().clone());
                 
-                data.samplers.push(effect.samplers["sampler_ambient_occlusion"].clone());
-                data.textures.push(model.material.ambient_occlusion.view().clone());
+                data.samplers.push(effect.samplers["sampler_normal"].clone());
+                data.textures.push(model.material.normal.view().clone());
 
                 data.samplers.push(effect.samplers["sampler_albedo"].clone());
                 data.textures.push(model.material.albedo.view().clone());
-                
-                data.samplers.push(effect.samplers["sampler_normal"].clone());
-                data.textures.push(model.material.normal.view().clone());
             }
 
             let (vertex, slice) = model.mesh.geometry();
             data.vertex_bufs.push(vertex.clone());
             data.out_colors.extend(out.color_buf(0).map(|cb| cb.as_output.clone()));
+            data.out_depth = out.depth_buf().map(|db| (db.as_output.clone(), (0, 0)));
             enc.draw(slice, &effect.pso, &data);
         })
     }
