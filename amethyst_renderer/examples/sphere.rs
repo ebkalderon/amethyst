@@ -25,7 +25,7 @@ fn main() {
         Pipeline::forward()
             .with_stage(
                 Stage::with_backbuffer()
-                    .with_pass(pass::ClearTarget::with_values([0.00196, 0.23726, 0.21765, 1.0], None))
+                    .with_pass(pass::ClearTarget::with_values([0.00196, 0.23726, 0.21765, 1.0], Some(1.0f32)))
                     .with_pass(&pass::DrawFlat::<PosNormTex>::new())
             )
     ).expect("Pipeline create");
@@ -33,7 +33,7 @@ fn main() {
     let verts = gen_sphere(32, 32);
     let mesh = renderer.create_mesh(Mesh::build(&verts)).expect("Mesh create");
 
-    // let bytes = load_texture("bricks.png").unwrap();
+   // let bytes = load_texture("bricks.png").unwrap();
     // let tex = renderer.create_texture(Texture::build(&bytes)).unwrap();
     let tex = renderer.create_texture(Texture::from_color_val([0.88235, 0.09412, 0.21569, 1.0])).expect("Texture create");
     let mtl = renderer.create_material(MaterialBuilder::new().with_albedo(&tex)).expect("Material create");

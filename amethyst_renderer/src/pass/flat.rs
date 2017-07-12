@@ -8,7 +8,7 @@ use pipe::pass::PassBuilder;
 use pipe::{Effect, DepthMode};
 use std::any::{Any, TypeId};
 use std::mem::{self, transmute};
-use vertex::{AttributeNames, Color, Normal, Position, PosNormTex, TextureCoord, VertexFormat};
+use vertex::{AttributeNames, Color, Position, TextureCoord, VertexFormat};
 
 static VERT_SRC: &'static [u8] = include_bytes!("shaders/vertex/basic.glsl");
 static FRAG_SRC: &'static [u8] = include_bytes!("shaders/fragment/flat.glsl");
@@ -25,7 +25,6 @@ impl<V> AttributeNames for DrawFlat<V>
     fn name<A: Any>() -> &'static str {
         match TypeId::of::<A>() {
             t if t == TypeId::of::<Position>() => "position",
-            t if t == TypeId::of::<Normal>() => "normal",
             t if t == TypeId::of::<TextureCoord>() => "tex_coord",
             _ => "", // Unused attribute
         }
@@ -60,7 +59,7 @@ impl<'a, V> Into<PassBuilder<'a>> for &'a DrawFlat<V>
 
         let effect = Effect::new_simple_prog(VERT_SRC, FRAG_SRC)
             .with_raw_constant_buffer("VertexArgs", mem::size_of::<VertexArgs>(), 1)
-            .with_raw_vertex_buffer(self.named_vertex_attributes.as_ref(), PosNormTex::size() as ElemStride, 0)
+            .with_raw_vertex_buffer(self.named_vertex_attributes.as_ref(), V::size() as ElemStride, 0)
             .with_sampler(&SAMPLER_NAMES, FilterMethod::Scale, WrapMode::Clamp)
             .with_texture("albedo")
             .with_output("color", Some(DepthMode::LessEqualWrite));
