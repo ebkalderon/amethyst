@@ -7,37 +7,31 @@ use gfx::pso::buffer::{ElemStride, NonInstanced};
 use pipe::pass::PassBuilder;
 use pipe::{Effect, DepthMode};
 use std::any::{Any, TypeId};
+use std::marker::PhantomData;
 use std::mem::{self, transmute};
-use vertex::{AttributeNames, Color, Position, TextureCoord, VertexFormat};
+use vertex::{Attribute, Color, Position, TextureCoord, VertexFormat, WithField};
 
 static VERT_SRC: &'static [u8] = include_bytes!("shaders/vertex/basic.glsl");
 static FRAG_SRC: &'static [u8] = include_bytes!("shaders/fragment/flat.glsl");
 
 /// Draw mesh without lighting
 #[derive(Clone, Debug, PartialEq)]
-pub struct DrawFlat<V: VertexFormat> {
-    named_vertex_attributes: V::NamedAttributes,
-}
-
-impl<V> AttributeNames for DrawFlat<V>
-    where V: VertexFormat
-{
-    fn name<A: Any>() -> &'static str {
-        match TypeId::of::<A>() {
-            t if t == TypeId::of::<Position>() => "position",
-            t if t == TypeId::of::<TextureCoord>() => "tex_coord",
-            _ => "", // Unused attribute
-        }
-    }
+pub struct DrawFlat<V> {
+    vertex_attributes: [(&'static str, Attribute); 2],
+    _pd: PhantomData<V>,
 }
 
 impl<V> DrawFlat<V>
-    where V: VertexFormat
+    where V: VertexFormat + WithField<Position> + WithField<TextureCoord>
 {
     /// Create instance of `DrawFlat` pass
     pub fn new() -> Self {
         DrawFlat {
-            named_vertex_attributes: V::named_attributes::<Self>(),
+            vertex_attributes: [
+                ("position", V::attribute::<Position>()),
+                ("tex_coord", V::attribute::<TextureCoord>()),
+            ],
+            _pd: PhantomData,
         }
     }
 }
@@ -59,7 +53,7 @@ impl<'a, V> Into<PassBuilder<'a>> for &'a DrawFlat<V>
 
         let effect = Effect::new_simple_prog(VERT_SRC, FRAG_SRC)
             .with_raw_constant_buffer("VertexArgs", mem::size_of::<VertexArgs>(), 1)
-            .with_raw_vertex_buffer(self.named_vertex_attributes.as_ref(), V::size() as ElemStride, 0)
+            .with_raw_vertex_buffer(self.vertex_attributes.as_ref(), V::size() as ElemStride, 0)
             .with_sampler(&SAMPLER_NAMES, FilterMethod::Scale, WrapMode::Clamp)
             .with_texture("albedo")
             .with_output("color", Some(DepthMode::LessEqualWrite));

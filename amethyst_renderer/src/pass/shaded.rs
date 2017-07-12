@@ -9,8 +9,9 @@ use gfx::traits::Pod;
 use pipe::pass::PassBuilder;
 use pipe::{Effect, DepthMode};
 use std::any::{Any, TypeId};
+use std::marker::PhantomData;
 use std::mem::{self, transmute};
-use vertex::{AttributeNames, Color, Normal, Position, Tangent, TextureCoord, VertexFormat};
+use vertex::{Attribute, Color, Normal, Position, Tangent, TextureCoord, VertexFormat, WithField};
 use light::{DirectionalLight, Light, PointLight};
 use scene::Scene;
 use std::io::Read;
@@ -20,31 +21,24 @@ static FRAG_SRC: &'static [u8] = include_bytes!("shaders/fragment/pbm.glsl");
 
 /// Draw mesh without lighting
 #[derive(Clone, Debug, PartialEq)]
-pub struct DrawShaded<V: VertexFormat> {
-    named_vertex_attributes: V::NamedAttributes,
-}
-
-impl<V> AttributeNames for DrawShaded<V>
-    where V: VertexFormat
-{
-    fn name<A: Any>() -> &'static str {
-        match TypeId::of::<A>() {
-            t if t == TypeId::of::<Position>() => "position",
-            t if t == TypeId::of::<Normal>() => "normal",
-            t if t == TypeId::of::<Tangent>() => "tangent",
-            t if t == TypeId::of::<TextureCoord>() => "tex_coord",
-            _ => "", // Unused attribute
-        }
-    }
+pub struct DrawShaded<V> {
+    vertex_attributes: [(&'static str, Attribute); 4],
+    _pd: PhantomData<V>,
 }
 
 impl<V> DrawShaded<V>
-    where V: VertexFormat
+    where V: VertexFormat + WithField<Position> + WithField<Normal> + WithField<Tangent> + WithField<TextureCoord>
 {
     /// Create instance of `DrawShaded` pass
     pub fn new() -> Self {
         DrawShaded {
-            named_vertex_attributes: V::named_attributes::<Self>(),
+            vertex_attributes: [
+                ("position", V::attribute::<Position>()),
+                ("normal", V::attribute::<Normal>()),
+                ("tangent", V::attribute::<Tangent>()),
+                ("tex_coord", V::attribute::<TextureCoord>()),
+            ],
+            _pd: PhantomData,
         }
     }
 }
@@ -98,7 +92,7 @@ impl<'a, V> Into<PassBuilder<'a>> for &'a DrawShaded<V>
         unsafe impl Pod for DirectionalLight {}
 
         let effect = Effect::new_simple_prog(VERT_SRC, &FRAG_SRC)
-            .with_raw_vertex_buffer(self.named_vertex_attributes.as_ref(), V::size() as ElemStride, 0)
+            .with_raw_vertex_buffer(self.vertex_attributes.as_ref(), V::size() as ElemStride, 0)
             .with_raw_constant_buffer("VertexArgs", mem::size_of::<VertexArgs>(), 1)
             .with_raw_constant_buffer("FragmentArgs", mem::size_of::<FragmentArgs>(), 1)
             .with_raw_constant_buffer("PointLights", mem::size_of::<PointLight>(), 512)

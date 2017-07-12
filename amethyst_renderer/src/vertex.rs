@@ -46,10 +46,23 @@ pub trait VertexFormat: Pod + Structure<Format> + Sized {
     fn named_attributes<N: AttributeNames>() -> Self::NamedAttributes;
 
     /// Returns the size of a single vertex in bytes.
+    #[inline]
     fn size() -> usize {
         use std::mem;
         mem::size_of::<Self>()
     }
+
+    /// Returns attribute of vertex by type
+    #[inline]
+    fn attribute<F>() -> Attribute where Self: WithField<F> {
+        <Self as WithField<F>>::field_attribute()
+    }
+}
+
+/// Trait implemented by all valid vertex formats for each field
+pub trait WithField<F>: VertexFormat {
+    /// Query individual attribute of the field for this format
+    fn field_attribute() -> Attribute;
 }
 
 /// Vertex format with position and RGBA8 color attributes.
@@ -74,6 +87,19 @@ impl VertexFormat for PosColor {
     }
 }
 
+impl WithField<Position> for PosColor {
+    #[inline]
+    fn field_attribute() -> Attribute {
+        Self::query("a_position").unwrap()
+    }
+}
+
+impl WithField<Color> for PosColor {
+    #[inline]
+    fn field_attribute() -> Attribute {
+        Self::query("a_color").unwrap()
+    }
+}
 
 /// Vertex format with position and UV texture coordinate attributes.
 #[derive(Clone, Copy, Debug, PartialEq, VertexData)]
@@ -94,6 +120,20 @@ impl VertexFormat for PosTex {
     #[inline]
     fn named_attributes<N: AttributeNames>() -> Self::NamedAttributes {
         [(N::name::<Position>(), Self::query("a_position").unwrap()), (N::name::<TextureCoord>(), Self::query("a_tex_coord").unwrap())]
+    }
+}
+
+impl WithField<Position> for PosTex {
+    #[inline]
+    fn field_attribute() -> Attribute {
+        Self::query("a_position").unwrap()
+    }
+}
+
+impl WithField<TextureCoord> for PosTex {
+    #[inline]
+    fn field_attribute() -> Attribute {
+        Self::query("a_tex_coord").unwrap()
     }
 }
 
@@ -121,6 +161,27 @@ impl VertexFormat for PosNormTex {
     }
 }
 
+impl WithField<Position> for PosNormTex {
+    #[inline]
+    fn field_attribute() -> Attribute {
+        Self::query("a_position").unwrap()
+    }
+}
+
+impl WithField<Normal> for PosNormTex {
+    #[inline]
+    fn field_attribute() -> Attribute {
+        Self::query("a_normal").unwrap()
+    }
+}
+
+impl WithField<TextureCoord> for PosNormTex {
+    #[inline]
+    fn field_attribute() -> Attribute {
+        Self::query("a_tex_coord").unwrap()
+    }
+}
+
 /// Vertex format with position, normal, and UV texture coordinate attributes.
 #[derive(Clone, Copy, Debug, PartialEq, VertexData)]
 pub struct PosNormTangTex {
@@ -144,5 +205,33 @@ impl VertexFormat for PosNormTangTex {
     #[inline]
     fn named_attributes<N: AttributeNames>() -> Self::NamedAttributes {
         [(N::name::<Position>(), Self::query("a_position").unwrap()), (N::name::<Normal>(), Self::query("a_normal").unwrap()), (N::name::<Tangent>(), Self::query("a_tangent").unwrap()), (N::name::<TextureCoord>(), Self::query("a_tex_coord").unwrap())]
+    }
+}
+
+impl WithField<Position> for PosNormTangTex {
+    #[inline]
+    fn field_attribute() -> Attribute {
+        Self::query("a_position").unwrap()
+    }
+}
+
+impl WithField<Normal> for PosNormTangTex {
+    #[inline]
+    fn field_attribute() -> Attribute {
+        Self::query("a_normal").unwrap()
+    }
+}
+
+impl WithField<Tangent> for PosNormTangTex {
+    #[inline]
+    fn field_attribute() -> Attribute {
+        Self::query("a_tangent").unwrap()
+    }
+}
+
+impl WithField<TextureCoord> for PosNormTangTex {
+    #[inline]
+    fn field_attribute() -> Attribute {
+        Self::query("a_tex_coord").unwrap()
     }
 }
