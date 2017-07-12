@@ -21,7 +21,7 @@ pub enum TextureCoord {}
 /// Type for texture coord attribute of vertex
 pub enum Normal {}
 
-/// Type for tangent attribute of vertes
+/// Type for tangent attribute of vertex
 pub enum Tangent {}
 
 /// Trait for mapping attribute type -> name
@@ -118,5 +118,31 @@ impl VertexFormat for PosNormTex {
     #[inline]
     fn named_attributes<N: AttributeNames>() -> Self::NamedAttributes {
         [(N::name::<Position>(), Self::query("a_position").unwrap()), (N::name::<Normal>(), Self::query("a_normal").unwrap()), (N::name::<TextureCoord>(), Self::query("a_tex_coord").unwrap())]
+    }
+}
+
+/// Vertex format with position, normal, and UV texture coordinate attributes.
+#[derive(Clone, Copy, Debug, PartialEq, VertexData)]
+pub struct PosNormTangTex {
+    /// Position of the vertex in 3D space.
+    pub a_position: [f32; 3],
+    /// Normal vector of the vertex.
+    pub a_normal: [f32; 3],
+    /// Tangent vector of the vertex.
+    pub a_tangent: [f32; 3],
+    /// UV texture coordinates used by the vertex.
+    pub a_tex_coord: [f32; 2],
+}
+
+impl VertexFormat for PosNormTangTex {
+    type Attributes = [Attribute; 4];
+    type NamedAttributes = [(&'static str, Attribute); 4];
+    #[inline]
+    fn attributes() -> Self::Attributes {
+        [Self::query("a_position").unwrap(), Self::query("a_normal").unwrap(), Self::query("a_tangent").unwrap(), Self::query("a_tex_coord").unwrap()]
+    }
+    #[inline]
+    fn named_attributes<N: AttributeNames>() -> Self::NamedAttributes {
+        [(N::name::<Position>(), Self::query("a_position").unwrap()), (N::name::<Normal>(), Self::query("a_normal").unwrap()), (N::name::<Tangent>(), Self::query("a_tangent").unwrap()), (N::name::<TextureCoord>(), Self::query("a_tex_coord").unwrap())]
     }
 }
