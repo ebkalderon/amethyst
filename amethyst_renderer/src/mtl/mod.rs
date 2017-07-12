@@ -58,7 +58,7 @@ impl MaterialBuilder {
             albedo: TextureKind::Constant([0.0, 0.0, 0.5, 1.0].into()),
             emission: TextureKind::Constant([0.0; 4].into()),
             metallic: TextureKind::Constant([0.0; 4].into()),
-            normal: TextureKind::Constant([0.0, 0.0, 1.0, 1.0].into()),
+            normal: TextureKind::Constant([0.5, 0.5, 1.0, 1.0].into()),
             roughness: TextureKind::Constant([0.5; 4].into()),
             ambient_occlusion: TextureKind::Constant([1.0; 4].into()),
             caveat: TextureKind::Constant([1.0; 4].into()),
