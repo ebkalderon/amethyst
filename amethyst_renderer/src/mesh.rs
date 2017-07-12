@@ -124,7 +124,7 @@ impl<'v> MeshBuilder<'v> {
         let vbuf = fac.create_buffer_immutable_raw(verts, stride, role, bind)?;
         let slice = Slice {
             start: 0,
-            end: verts.len() as u32,
+            end: (verts.len() / stride) as u32,
             base_vertex: 0,
             instances: None,
             buffer: IndexBuffer::Auto,
