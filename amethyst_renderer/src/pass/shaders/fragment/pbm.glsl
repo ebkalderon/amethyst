@@ -90,6 +90,8 @@ void main() {
         float k = a1 * a1 / 8.0;
         float NdotV = max(dot(normal, view_direction), 0.0);
         float NdotL = max(dot(normal, light_direction), 0.0);
+        float HdotV = max(dot(halfway, view_direction), 0.0);
+
         float denom = NdotV * (1.0 - k) + k;
         float ggx1 = NdotV / denom;
 
@@ -97,7 +99,7 @@ void main() {
         float ggx2 = NdotL / denom;
         float geometry = ggx1 * ggx2;
 
-        vec3 fresnel = fresnel_base + (1.0 - fresnel_base) * pow(1.0 - NdotV, 5.0);
+        vec3 fresnel = fresnel_base + (1.0 - fresnel_base) * pow(1.0 - HdotV, 5.0);
 
         vec3 diffuse = vec3(1.0) - fresnel;
         diffuse *= 1.0 - metallic;
