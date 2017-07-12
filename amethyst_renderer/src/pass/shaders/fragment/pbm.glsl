@@ -42,6 +42,7 @@ uniform sampler2D sampler_caveat;
 in VertexData {
     vec4 position;
     vec3 normal;
+    vec3 tangent;
     vec2 tex_coord;
 } vertex;
 
