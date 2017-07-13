@@ -61,6 +61,20 @@ float normal_distribution(vec3 N, vec3 H, float a) {
     return a2 / denom;
 }
 
+float geometry(float NdotV, float NdotL, float r2) {
+    float a1 = r2 + 1.0;
+    float k = a1 * a1 / 8.0;
+    float denom = NdotV * (1.0 - k) + k;
+    float ggx1 = NdotV / denom;
+    denom = NdotL * (1.0 - k) + k;
+    float ggx2 = NdotL / denom;
+    return ggx1 * ggx2;
+}
+
+vec3 fresnel(float HdotV, vec3 fresnel_base) {
+    return fresnel_base + (1.0 - fresnel_base) * pow(1.0 - HdotV, 5.0);
+}
+
 void main() {
     vec3 albedo             = texture(sampler_albedo, vertex.tex_coord).rgb;
     vec3 emission           = texture(sampler_emission, vertex.tex_coord).rgb; // TODO: Use emission
@@ -90,26 +104,17 @@ void main() {
     for (int i = 0; i < point_light_count; i++) {
         vec3 view_direction = normalize(camera_position - vertex.position.xyz);
         vec3 light_direction = normalize(plight[i].position.xyz - vertex.position.xyz);
-        vec3 halfway = normalize(view_direction + light_direction);
         float intensity = plight[i].intensity / dot(light_direction, light_direction);
 
+        vec3 halfway = normalize(view_direction + light_direction);
         float normal_distribution = normal_distribution(normal, halfway, roughness2);
 
-        float a1 = roughness2 + 1.0;
-        float k = a1 * a1 / 8.0;
         float NdotV = max(dot(normal, view_direction), 0.0);
         float NdotL = max(dot(normal, light_direction), 0.0);
         float HdotV = max(dot(halfway, view_direction), 0.0);
-
-        float denom = NdotV * (1.0 - k) + k;
-        float ggx1 = NdotV / denom;
-
-        denom = NdotL * (1.0 - k) + k;
-        float ggx2 = NdotL / denom;
-        float geometry = ggx1 * ggx2;
+        float geometry = geometry(NdotV, NdotL, roughness2);
 
         vec3 fresnel = fresnel_base + (1.0 - fresnel_base) * pow(1.0 - HdotV, 5.0);
-
         vec3 diffuse = vec3(1.0) - fresnel;
         diffuse *= 1.0 - metallic;
 
@@ -121,7 +126,7 @@ void main() {
     }
 
     vec3 ambient = ambient_color * albedo * ambient_occlusion;
-    vec3 color = ambient + lighted;
+    vec3 color = ambient + lighted + emission;
    
     out_color = vec4(color, 1.0);
 }
