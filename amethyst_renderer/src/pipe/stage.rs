@@ -2,18 +2,17 @@
 
 use error::{Error, Result};
 use pipe::{Target, Targets};
-use pipe::pass::{MainPass, Pass, PassBuilder, PostPass, PrepPass};
+use pipe::pass::{ModelPass, Pass, PassBuilder, SimplePass, BasicPass};
+use rayon::iter::{IndexedParallelIterator, IntoParallelIterator, ParallelIterator};
 use scene::{Model, Scene};
 use std::sync::Arc;
-use types::{Encoder, Factory};
+use types::{Encoder, Device, Factory};
 
 /// A stage in the rendering pipeline.
 #[derive(Clone, Debug)]
 pub struct Stage {
     enabled: bool,
-    prep_passes: Vec<PrepPass>,
-    main_passes: Vec<MainPass>,
-    post_passes: Vec<PostPass>,
+    passes: Vec<Pass>,
     target: Arc<Target>,
 }
 
@@ -38,34 +37,54 @@ impl Stage {
         self.enabled
     }
 
-    /// Applies all passes in this stage to the given `Scene` and outputs the
-    /// result to the proper target.
-    pub fn apply_prep(&self, enc: &mut Encoder) {
-        if self.enabled {
-            for pass in self.prep_passes.iter() {
-                pass.apply(enc, &self.target);
-            }
-        }
+    /// Get count of parallelable passes
+    pub fn encoders_required(&self, jobs_count: usize)-> usize {
+        self.passes.iter().map(|pass| match *pass {
+            Pass::Basic(_) => 0,
+            Pass::Simple(_) => 0,
+            Pass::Model(_) => 1,
+        }).sum::<usize>() * (jobs_count - 1) + 1
     }
 
     /// Applies all passes in this stage to the given `Scene` and outputs the
     /// result to the proper target.
-    pub fn apply_main(&self, enc: &mut Encoder, scene: &Scene, model: &Model) {
+    pub fn apply<'a>(&self, mut encoders: &'a mut [Encoder], jobs_count: usize, scene: &Scene) -> &'a mut [Encoder] {
         if self.enabled {
-            for pass in self.main_passes.iter() {
-                pass.apply(enc, &self.target, scene, model);
-            }
-        }
-    }
+            // Numbers of encoders must be enough to run all parallellable passes
+            // in specified numbers of jobs
+            // Note that one encoder is reused each time
+            assert!(self.encoders_required(jobs_count) <= encoders.len());
 
-    /// Applies all passes in this stage to the given `Scene` and outputs the
-    /// result to the proper target.
-    pub fn apply_post(&self, enc: &mut Encoder, scene: &Scene) {
-        if self.enabled {
-            for pass in self.post_passes.iter() {
-                pass.apply(enc, &self.target, scene);
+            for pass in self.passes.iter() {
+                match *pass {
+                    // Passes that do not requires running in parallel submit their
+                    // commands into first encoder available
+                    Pass::Basic(ref pass) => pass.apply(&mut encoders[0], &self.target),
+                    Pass::Simple(ref pass) => pass.apply(&mut encoders[0], &self.target, scene),
+                    Pass::Model(ref pass) => {
+                        // Retrive models in chunks
+                        let mut mod_par_iter = scene.par_chunks_models(jobs_count);
+
+                        // Check that there is enough encoders
+                        assert!(encoders.len() >= mod_par_iter.len());
+
+                        // Split off used encoders except last one
+                        encoders = {
+                            let encoders = encoders;
+                            let (touse, left) = encoders.split_at_mut(jobs_count - 1);
+                            // Apply pass for models
+                            mod_par_iter.zip(touse).for_each(|(models, enc)| {
+                                for model in models {
+                                    pass.apply(enc, &self.target, scene, model);
+                                }
+                            });
+                            left
+                        };
+                    }
+                }
             }
         }
+        encoders 
     }
 }
 
@@ -108,23 +127,11 @@ impl<'a> StageBuilder<'a> {
             .cloned()
             .ok_or(Error::NoSuchTarget(name))?;
 
-        let mut prep_passes = Vec::new();
-        let mut main_passes = Vec::new();
-        let mut post_passes = Vec::new();
-
-        for pass in self.passes.into_iter().map(|pb| pb.finish(fac, targets, &out)) {
-            match pass? {
-                Pass::Prep(pass) => prep_passes.push(pass),
-                Pass::Main(pass) => main_passes.push(pass),
-                Pass::Post(pass) => post_passes.push(pass),
-            }
-        }
+        let passes = self.passes.into_iter().map(|pb| pb.finish(fac, targets, &out)).collect::<Result<Vec<_>>>()?;
 
         Ok(Stage {
             enabled: self.enabled,
-            prep_passes: prep_passes,
-            main_passes: main_passes,
-            post_passes: post_passes,
+            passes: passes,
             target: out,
         })
     }

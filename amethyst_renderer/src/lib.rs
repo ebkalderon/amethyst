@@ -156,32 +156,42 @@ impl Renderer {
         use gfx::Device;
         use rayon::prelude::*;
 
-        assert_eq!(self.encoders.len(), num_cpus::get());
+        let Renderer { ref mut device, ref mut encoders, ref mut factory, ref pool, ref mut window, .. } = *self;
 
-        for stage in pipe.stages() {
+        let num_threads = pool.current_num_threads();
+        let encoders_required = pipe.stages().iter().map(|stage| {
             if stage.is_enabled() {
-                stage.apply_prep(self.encoders.first_mut().unwrap());
-                {
-                    let encoders = self.encoders.as_mut_slice();
-                    let encoders_count = encoders.len();
-                    self.pool.install(|| {
-                        let mut enc_par_iter = encoders.into_par_iter();
-                        let mut mod_par_iter = scene.par_chunks_models(encoders_count);
-                        assert!(enc_par_iter.len() >= mod_par_iter.len());
-                        enc_par_iter.zip(mod_par_iter)
-                            .for_each(|(enc, models)| for model in models { stage.apply_main(enc, scene, model) });
-                    });
-                }
-                stage.apply_post(self.encoders.last_mut().unwrap(), scene);
-                for enc in self.encoders.iter_mut() {
-                    enc.flush(&mut self.device);
-                }
+                stage.encoders_required(num_threads) - 1
             }
+            else {
+                0
+            }
+        }).sum::<usize>() + 1;
+
+        if encoders_required > encoders.len() {
+            let count = encoders.len();
+            encoders.extend((count..encoders_required)
+                .map(|_| factory.create_command_buffer().into()))
         }
 
-        self.device.cleanup();
+        {
+            pool.install(|| {
+                let mut encoders = encoders.as_mut_slice();
+                for stage in pipe.stages() {
+                    if stage.is_enabled() {
+                        encoders = { let encoders = encoders; stage.apply(encoders, num_threads, scene) };
+                    }
+                }
+            });
+        }
+
+        for enc in encoders.iter_mut() {
+            enc.flush(device);
+        }
+
+        device.cleanup();
         #[cfg(feature = "opengl")]
-        self.window.swap_buffers().expect("OpenGL context has been lost");
+        window.swap_buffers().expect("OpenGL context has been lost");
     }
 
     /// Returns an immutable reference to the renderer window.
