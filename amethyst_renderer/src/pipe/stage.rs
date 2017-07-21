@@ -37,54 +37,27 @@ impl Stage {
         self.enabled
     }
 
-    /// Get count of parallelable passes
-    pub fn encoders_required(&self, jobs_count: usize)-> usize {
-        self.passes.iter().map(|pass| match *pass {
-            Pass::Basic(_) => 0,
-            Pass::Simple(_) => 0,
-            Pass::Model(_) => 1,
-        }).sum::<usize>() * (jobs_count - 1) + 1
+    /// Get passes of the stage
+    pub fn passes(&self) -> &[Pass] {
+        self.passes.as_slice()
     }
 
-    /// Applies all passes in this stage to the given `Scene` and outputs the
-    /// result to the proper target.
-    pub fn apply<'a>(&self, mut encoders: &'a mut [Encoder], jobs_count: usize, scene: &Scene) -> &'a mut [Encoder] {
-        if self.enabled {
-            // Numbers of encoders must be enough to run all parallellable passes
-            // in specified numbers of jobs
-            // Note that one encoder is reused each time
-            assert!(self.encoders_required(jobs_count) <= encoders.len());
+    /// Get target of the stage
+    pub fn target(&self) -> &Target {
+        &self.target
+    }
 
-            for pass in self.passes.iter() {
-                match *pass {
-                    // Passes that do not requires running in parallel submit their
-                    // commands into first encoder available
-                    Pass::Basic(ref pass) => pass.apply(&mut encoders[0], &self.target),
-                    Pass::Simple(ref pass) => pass.apply(&mut encoders[0], &self.target, scene),
-                    Pass::Model(ref pass) => {
-                        // Retrive models in chunks
-                        let mut mod_par_iter = scene.par_chunks_models(jobs_count);
-
-                        // Check that there is enough encoders
-                        assert!(encoders.len() >= mod_par_iter.len());
-
-                        // Split off used encoders except last one
-                        encoders = {
-                            let encoders = encoders;
-                            let (touse, left) = encoders.split_at_mut(jobs_count - 1);
-                            // Apply pass for models
-                            mod_par_iter.zip(touse).for_each(|(models, enc)| {
-                                for model in models {
-                                    pass.apply(enc, &self.target, scene, model);
-                                }
-                            });
-                            left
-                        };
-                    }
-                }
-            }
-        }
-        encoders 
+    /// Get count of parallelable passes
+    pub fn encoders_required(&self, jobs_count: usize) -> usize {
+        self.passes
+            .iter()
+            .map(|pass| match *pass {
+                     Pass::Basic(_) => 1,
+                     Pass::Simple(_) => 1,
+                     Pass::Model(_) => jobs_count,
+                     Pass::Light(_) => jobs_count,
+                 })
+            .sum::<usize>()
     }
 }
 
@@ -130,9 +103,9 @@ impl<'a> StageBuilder<'a> {
         let passes = self.passes.into_iter().map(|pb| pb.finish(fac, targets, &out)).collect::<Result<Vec<_>>>()?;
 
         Ok(Stage {
-            enabled: self.enabled,
-            passes: passes,
-            target: out,
-        })
+               enabled: self.enabled,
+               passes: passes,
+               target: out,
+           })
     }
 }

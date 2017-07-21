@@ -21,8 +21,12 @@ pub type Lights<'l> = Iter<'l, Light>;
 
 /// Immutable parallel iterator of models.
 pub type Models<'l> = Iter<'l, Model>;
+
 /// Immutable parallel iterator of models.
 pub type ModelsChunks<'l> = Chunks<'l, Model>;
+
+/// Immutable parallel iterator of models.
+pub type LightsChunks<'l> = Chunks<'l, Light>;
 
 /// Collection of lights and meshes to render.
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -57,6 +61,13 @@ impl Scene {
     pub fn par_iter_lights(&self) -> Lights {
         use rayon::prelude::*;
         self.lights.par_iter()
+    }
+
+    /// Iterates through all stored lights in parallel in chunks.
+    pub fn par_chunks_lights(&self, count: usize) -> LightsChunks {
+        use rayon::prelude::*;
+        let size = self.lights.len();
+        self.lights.par_chunks(((size - 1) / count) + 1)
     }
 
     /// Iterates through all stored models in parallel.

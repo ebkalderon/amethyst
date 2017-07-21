@@ -5,7 +5,7 @@ use cgmath::{Matrix4, One};
 use gfx;
 use gfx::pso::buffer::{ElemStride, NonInstanced};
 use pipe::pass::PassBuilder;
-use pipe::{Effect, DepthMode};
+use pipe::{DepthMode, Effect};
 use std::any::{Any, TypeId};
 use std::marker::PhantomData;
 use std::mem::{self, transmute};
@@ -27,10 +27,8 @@ impl<V> DrawFlat<V>
     /// Create instance of `DrawFlat` pass
     pub fn new() -> Self {
         DrawFlat {
-            vertex_attributes: [
-                ("position", V::attribute::<Position>()),
-                ("tex_coord", V::attribute::<TextureCoord>()),
-            ],
+            vertex_attributes: [("position", V::attribute::<Position>()),
+                                ("tex_coord", V::attribute::<TextureCoord>())],
             _pd: PhantomData,
         }
     }
@@ -46,9 +44,9 @@ impl<'a, V> Into<PassBuilder<'a>> for &'a DrawFlat<V>
 
         #[derive(Clone, Copy, Debug)]
         struct VertexArgs {
-            proj: [[f32;4]; 4],
-            view: [[f32;4]; 4],
-            model: [[f32;4]; 4],
+            proj: [[f32; 4]; 4],
+            view: [[f32; 4]; 4],
+            model: [[f32; 4]; 4],
         };
 
         let effect = Effect::new_simple_prog(VERT_SRC, FRAG_SRC)
@@ -58,20 +56,29 @@ impl<'a, V> Into<PassBuilder<'a>> for &'a DrawFlat<V>
             .with_texture("albedo")
             .with_output("color", Some(DepthMode::LessEqualWrite));
 
-        PassBuilder::main(effect, move |ref mut enc, ref out, ref effect, ref scene, ref model| {
-            let vertex_args = scene.active_camera().map(|cam| VertexArgs {
-                proj: cam.proj.into(),
-                view: Matrix4::look_at(cam.eye, cam.eye + cam.forward, cam.up).into(),
-                model: model.pos.into(),
-            }).unwrap_or_else(|| VertexArgs {
-                proj: Matrix4::one().into(),
-                view: Matrix4::one().into(),
-                model: model.pos.into(),
-            });
+        PassBuilder::model(effect,
+                           move |ref mut enc, ref out, ref effect, ref scene, ref model| {
+            let vertex_args = scene
+                .active_camera()
+                .map(|cam| {
+                         VertexArgs {
+                             proj: cam.proj.into(),
+                             view: Matrix4::look_at(cam.eye, cam.eye + cam.forward, cam.up).into(),
+                             model: model.pos.into(),
+                         }
+                     })
+                .unwrap_or_else(|| {
+                                    VertexArgs {
+                                        proj: Matrix4::one().into(),
+                                        view: Matrix4::one().into(),
+                                        model: model.pos.into(),
+                                    }
+                                });
             let vertex_args_buf = effect.const_bufs["VertexArgs"].clone();
-            
+
             // FIXME: update raw buffer without transmute
-            enc.update_constant_buffer::<VertexArgs>(unsafe { transmute(&vertex_args_buf) }, &vertex_args);
+            enc.update_constant_buffer::<VertexArgs>(unsafe { transmute(&vertex_args_buf) },
+                                                     &vertex_args);
 
             let mut data = effect.pso_data.clone();
             data.const_bufs.push(vertex_args_buf);
@@ -79,7 +86,8 @@ impl<'a, V> Into<PassBuilder<'a>> for &'a DrawFlat<V>
             data.vertex_bufs.push(vertex.clone());
             data.samplers.push(effect.samplers["albedo"].clone());
             data.textures.push(model.material.albedo.view().clone());
-            data.out_colors.extend(out.color_buf(0).map(|cb| cb.as_output.clone()));
+            data.out_colors
+                .extend(out.color_buf(0).map(|cb| cb.as_output.clone()));
             data.out_depth = out.depth_buf().map(|db| (db.as_output.clone(), (0, 0)));
             enc.draw(slice, &effect.pso, &data);
         })
