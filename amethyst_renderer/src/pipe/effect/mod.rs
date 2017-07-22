@@ -160,14 +160,14 @@ impl<'a> EffectBuilder<'a> {
 
     /// Adds a global constant to this `Effect`.
     pub fn with_raw_global(mut self, name: &'a str) -> Self {
-        self.init.globals.push(name.into());
+        self.init.globals.push(name);
         self
     }
 
     /// Adds a raw uniform constant to this `Effect`.
     /// Requests a new constant buffer to be created
     pub fn with_raw_constant_buffer(mut self, name: &'a str, size: usize, num: usize) -> Self {
-        self.const_bufs.insert(name.into(), BufferInfo {
+        self.const_bufs.insert(name, BufferInfo {
             role: BufferRole::Constant,
             bind: Bind::empty(),
             usage: Usage::Dynamic,
@@ -193,17 +193,15 @@ impl<'a> EffectBuilder<'a> {
     }
 
     /// Requests a new texture sampler be created for this `Effect`.
-    pub fn with_sampler(mut self, names: &'a [&'a str], f: FilterMethod, w: WrapMode) -> Self
-    {
+    pub fn with_sampler(mut self, names: &'a [&'a str], f: FilterMethod, w: WrapMode) -> Self {
         self.samplers.insert(SamplerInfo::new(f, w), names);
         self.init.samplers.extend(names);
         self
     }
 
     /// Adds a texture to this `Effect`
-    pub fn with_texture(mut self, name: &'a str) -> Self
-    {
-        self.init.textures.push(name.into());
+    pub fn with_texture(mut self, name: &'a str) -> Self {
+        self.init.textures.push(name);
         self
     }
 

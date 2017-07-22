@@ -111,43 +111,10 @@ mod scene;
 mod tex;
 mod types;
 
-struct Pool {
-    encoders: Vec<Encoder>,
-}
-
-impl Pool {
-    fn new() -> Self {
-        Pool { encoders: Vec::new() }
-    }
-
-    fn ensure(&mut self, size: usize, factory: &mut Factory) {
-        let count = self.encoders.len();
-        if size > count {
-            self.encoders
-                .extend((count..size).map(|_| factory.create_command_buffer().into()))
-        }
-    }
-
-    fn dispense(&mut self) -> &mut [Encoder] {
-        self.encoders.as_mut_slice()
-    }
-
-    fn flush(&mut self, device: &mut types::Device) {
-        for enc in self.encoders.iter_mut() {
-            enc.flush(device);
-        }
-    }
-}
-
-macro_rules! take {
-    ($x:ident) => {{let slice = $x; let (first, left) = slice.split_first_mut().unwrap(); $x = left; first}};
-    ($x:ident, $count:expr) => {{let slice = $x; let (count, left) = slice.split_at_mut($count); $x = left; count}};
-}
-
 /// Generic renderer.
 pub struct Renderer {
     device: types::Device,
-    encoders: Pool,
+    encoders: Vec<Encoder>,
     factory: Factory,
     main_target: Arc<Target>,
     pool: Arc<rayon::ThreadPool>,
@@ -206,35 +173,60 @@ impl Renderer {
             .map(|stage| stage.encoders_required(num_threads))
             .sum::<usize>();
 
-        encoders.ensure(encoders_required, factory);
+        let encoders_count = encoders.len();
+        if encoders_count < encoders_required {
+            encoders.extend((encoders_count..encoders_required).map(|_| factory.create_command_buffer().into()))
+        }
 
         {
-            let mut encoders = encoders.dispense();
+            let mut encoders = encoders.as_mut_slice();
             let mut model = Vec::new();
             let mut light = Vec::new();
             for stage in pipe.stages().iter().filter(|stage| stage.is_enabled()) {
                 for pass in stage.passes().iter() {
                     match *pass {
                         Pass::Basic(ref pass) => {
-                            pass.apply(take!(encoders), &stage.target());
+                            let enc = {
+                                let slice = encoders;
+                                let (first, left) = slice.split_first_mut().unwrap();
+                                encoders = left;
+                                first
+                            };
+                            pass.apply(enc, &stage.target());
                         }
                         Pass::Simple(ref pass) => {
-                            pass.apply(take!(encoders), &stage.target(), scene)
+                            let enc = {
+                                let slice = encoders;
+                                let (first, left) = slice.split_first_mut().unwrap();
+                                encoders = left;
+                                first
+                            };
+                            pass.apply(enc, &stage.target(), scene)
                         }
                         Pass::Model(ref pass) => {
                             let mut fragments_iter = scene.par_chunks_models(num_threads);
-                            let encoders = take!(encoders, fragments_iter.len());
+                            let enc = {
+                                let slice = encoders;
+                                let (count, left) = slice.split_at_mut(fragments_iter.len());
+                                encoders = left;
+                                count
+                            };
                             model.push(fragments_iter
-                                           .zip(encoders)
+                                           .zip(enc)
                                            .map(move |(models, enc)| for model in models {
                                                     pass.apply(enc, &stage.target(), scene, model);
                                                 }));
                         }
                         Pass::Light(ref pass) => {
                             let mut fragments_iter = scene.par_chunks_lights(num_threads);
-                            let encoders = take!(encoders, fragments_iter.len());
+                            let enc = {
+                                let slice = encoders;
+                                let (count, left) = slice.split_at_mut(fragments_iter.len());
+                                encoders = left;
+                                count
+                            };
                             light.push(fragments_iter
-                                           .zip(encoders)
+                                           .zip(enc)
                                            .map(move |(lights, enc)| for light in lights {
                                                     pass.apply(enc, &stage.target(), scene, light);
                                                 }));
@@ -250,7 +242,9 @@ impl Renderer {
             });
         }
 
-        encoders.flush(device);
+        for enc in encoders.iter_mut() {
+            enc.flush(device);
+        }
         device.cleanup();
         #[cfg(feature = "opengl")]
         window.swap_buffers().expect("OpenGL context has been lost");
@@ -314,7 +308,7 @@ impl<'a> RendererBuilder<'a> {
 
         Ok(Renderer {
                device: dev,
-               encoders: Pool::new(),
+               encoders: Vec::new(),
                factory: fac,
                main_target: Arc::new(main),
                pool: pool,

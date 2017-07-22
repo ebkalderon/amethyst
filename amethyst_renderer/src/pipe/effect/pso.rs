@@ -44,9 +44,7 @@ impl<'d> PipelineInit for Init<'d> {
         for cbuf in self.const_bufs.iter() {
             let mut meta_cbuf = <RawConstantBuffer as DataLink<'d>>::new();
             for info in info.constant_buffers.iter() {
-                // println!("Link constant {:?}/{:?}", info.name, cbuf);
                 if let Some(res) = meta_cbuf.link_constant_buffer(info, cbuf) {
-                    // println!("Linked {:?}", res);
                     let d = res.map_err(|e| InitError::ConstantBuffer(info.name.as_str(), Some(e)))?;
                     desc.constant_buffers[info.slot as usize] = Some(d);
                     break;
@@ -58,9 +56,7 @@ impl<'d> PipelineInit for Init<'d> {
         for global in self.globals.iter() {
             let mut meta_global = <RawGlobal as DataLink<'d>>::new();
             for info in info.globals.iter() {
-                // println!("Link global {:?}/{:?}", info.name, global);
                 if let Some(res) = meta_global.link_global_constant(info, global) {
-                    // println!("Linked {:?}", res);
                     res.map_err(|e| InitError::GlobalConstant(info.name.as_str(), Some(e)))?;
                     break;
                 }
@@ -71,7 +67,6 @@ impl<'d> PipelineInit for Init<'d> {
         for color in self.out_colors.iter() {
             let mut meta_color = <RenderTarget as DataLink<'d>>::new();
             for info in info.outputs.iter() {
-                // println!("Link output {:?}/{:?}", info.name, color);
                 if let Some(res) = meta_color.link_output(info, color) {
                     let d = res.map_err(|e| InitError::PixelExport(info.name.as_str(), Some(e)))?;
                     desc.color_targets[info.slot as usize] = Some(d);
@@ -88,7 +83,6 @@ impl<'d> PipelineInit for Init<'d> {
                 container: ContainerType::Vector(4),
             };
             for color in self.out_colors.iter() {
-                // println!("Link unknown output {:?}/{:?}", info.name, color);
                 let mut meta_color = <RenderTarget as DataLink<'d>>::new();
                 if let Some(res) = meta_color.link_output(&info, color) {
                     let d = res.map_err(|e| InitError::PixelExport("", Some(e)))?;
@@ -101,7 +95,6 @@ impl<'d> PipelineInit for Init<'d> {
 
         if let Some(depth) = self.out_depth {
             let mut meta_depth = <DepthStencilTarget as DataLink<'d>>::new();
-            // println!("Link depth {:?}", depth);
             if let Some(d) = meta_depth.link_depth_stencil(&depth) {
                 desc.scissor = meta_depth.link_scissor();
                 desc.depth_stencil = Some(d);
@@ -112,9 +105,7 @@ impl<'d> PipelineInit for Init<'d> {
         for smp in self.samplers.iter() {
             let mut meta_smp = <Sampler as DataLink<'d>>::new();
             for info in info.samplers.iter() {
-                // println!("Link sampler {:?}/{:?}", info, smp);
                 if let Some(d) = meta_smp.link_sampler(info, smp) {
-                    // println!("Linked {:?}", d);
                     desc.samplers[info.slot as usize] = Some(d);
                     break;
                 }
@@ -125,9 +116,7 @@ impl<'d> PipelineInit for Init<'d> {
         for tex in self.textures.iter() {
             let mut meta_tex = <RawShaderResource as DataLink<'d>>::new();
             for info in info.textures.iter() {
-                // println!("Link texture {:?}/{:?}", info, tex);
                 if let Some(res) = meta_tex.link_resource_view(info, tex) {
-                    // println!("Linked {:?}", res);
                     let d = res.map_err(|_| InitError::ResourceView(info.name.as_str(), Some(())))?;
                     desc.resource_views[info.slot as usize] = Some(d);
                     break;
