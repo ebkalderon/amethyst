@@ -115,7 +115,9 @@ mod tests {
         let upper = duration / 100 * (100 + UNCERTAINTY);
         assert!(elapsed < upper && elapsed > lower,
                 "expected {} +- {}% seconds, got {:?}",
-                DURATION, UNCERTAINTY, elapsed);
+                DURATION,
+                UNCERTAINTY,
+                elapsed);
     }
 
     #[test]
@@ -153,7 +155,9 @@ mod tests {
         let upper = duration / 100 * (100 + UNCERTAINTY);
         assert!(elapsed < upper && elapsed > lower,
                 "expected {} +- {}% seconds, got {:?}",
-                DURATION, UNCERTAINTY, elapsed);
+                DURATION,
+                UNCERTAINTY,
+                elapsed);
     }
 
     // test that multiple start-stop cycles are cumulative
@@ -176,6 +180,8 @@ mod tests {
         let upper = duration / 100 * (100 + UNCERTAINTY);
         assert!(elapsed < upper && elapsed > lower,
                 "expected {}  +- {}% seconds, got {:?}",
-                DURATION, UNCERTAINTY, elapsed);
+                DURATION,
+                UNCERTAINTY,
+                elapsed);
     }
 }

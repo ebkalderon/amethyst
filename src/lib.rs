@@ -14,7 +14,16 @@
 //! ```no_run
 //! extern crate amethyst;
 //!
+<<<<<<< HEAD
 //! use amethyst::prelude::*;
+=======
+//! use amethyst::{Application, Event, State, Trans, VirtualKeyCode, WindowEvent};
+//! use amethyst::asset_manager::AssetManager;
+//! use amethyst::config::Config;
+//! use amethyst::ecs::World;
+//! use amethyst::gfx_device::DisplayConfig;
+//! use amethyst::renderer::Pipeline;
+>>>>>>> develop
 //!
 //! struct GameState;
 //!
@@ -49,12 +58,8 @@
 #![doc(html_logo_url = "https://tinyurl.com/jtmm43a")]
 
 pub extern crate amethyst_renderer as renderer;
-
 #[macro_use]
-extern crate serde_derive;
-extern crate serde;
-extern crate serde_yaml;
-extern crate toml;
+pub extern crate amethyst_config as config;
 
 extern crate cgmath;
 extern crate dds;
@@ -66,6 +71,7 @@ extern crate gfx;
 extern crate imagefmt;
 extern crate num_cpus;
 extern crate rayon;
+extern crate smallvec;
 extern crate specs;
 extern crate wavefront_obj;
 extern crate winit;
@@ -74,11 +80,7 @@ extern crate winit;
 #[macro_use]
 extern crate thread_profiler;
 
-pub use self::app::{Application, ApplicationBuilder, Engine};
-pub use self::error::{Error, Result};
-pub use self::state::{State, StateMachine, Trans};
-
-pub mod assets;
+pub mod asset_manager;
 pub mod ecs;
 pub mod event;
 pub mod prelude;

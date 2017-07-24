@@ -114,9 +114,7 @@ impl Assets {
     }
 
     /// Read the storage of all assets for a certain type
-    pub fn read_assets<A: Any + Send + Sync>
-        (&self)
-         -> ReadStorage<Asset<A>> {
+    pub fn read_assets<A: Any + Send + Sync>(&self) -> ReadStorage<Asset<A>> {
         self.assets.read()
     }
 
@@ -137,8 +135,8 @@ impl Assets {
 
     fn add_asset<A: Any + Send + Sync>(&mut self, name: &str, asset: A) -> AssetId {
         *self.asset_ids
-            .entry(name.into())
-            .or_insert(self.assets.create_entity().with(Asset::<A>(asset)).build())
+             .entry(name.into())
+             .or_insert(self.assets.create_entity().with(Asset::<A>(asset)).build())
     }
 }
 
@@ -199,14 +197,16 @@ impl AssetManager {
         let asset_id = TypeId::of::<A>();
         let source_id = TypeId::of::<S>();
 
-        self.closures.insert((asset_id, source_id),
-                             Box::new(|loader: &mut Assets, name: &str, raw: &[u8]| {
+        self.closures
+            .insert((asset_id, source_id),
+                    Box::new(|loader: &mut Assets, name: &str, raw: &[u8]| {
                                  S::from_raw(loader, raw)
                                      .and_then(|data| AssetLoader::<A>::from_data(loader, data))
                                      .and_then(|asset| Some(loader.add_asset(name, asset)))
                              }));
 
-        self.asset_type_ids.insert((asset.into(), asset_id), source_id);
+        self.asset_type_ids
+            .insert((asset.into(), asset_id), source_id);
     }
 
     /// Register an asset store
@@ -236,7 +236,9 @@ impl AssetManager {
                                             asset_type: &str)
                                             -> Option<AssetId> {
         let mut buf = Vec::new();
-        if let Some(store) = self.stores.iter().find(|store| store.has_asset(name, asset_type)) {
+        if let Some(store) = self.stores
+               .iter()
+               .find(|store| store.has_asset(name, asset_type)) {
             store.load_asset(name, asset_type, &mut buf);
         } else {
             return None;
@@ -332,7 +334,10 @@ impl DirectoryStore {
 impl AssetStore for DirectoryStore {
     fn has_asset(&self, name: &str, asset_type: &str) -> bool {
         let file_path = self.asset_to_path(name, asset_type);
-        fs::metadata(file_path).ok().map(|meta| meta.is_file()).is_some()
+        fs::metadata(file_path)
+            .ok()
+            .map(|meta| meta.is_file())
+            .is_some()
     }
 
     fn load_asset(&self, name: &str, asset_type: &str, buf: &mut Vec<u8>) -> Option<usize> {
@@ -501,7 +506,9 @@ mod tests {
         assets.register_loader::<Foo, u32>("foo");
         assets.add_loader::<FooLoader>(FooLoader);
 
-        assert!(assets.load_asset_from_raw::<Foo>("asset01", "foo", &[0; 2]).is_some());
+        assert!(assets
+                    .load_asset_from_raw::<Foo>("asset01", "foo", &[0; 2])
+                    .is_some());
         assert_eq!(None, assets.load_asset_from_data::<Foo, u32>("foo", 2));
     }
 
