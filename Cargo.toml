@@ -15,12 +15,13 @@ license = "MIT OR Apache-2.0"
 
 [badges]
 appveyor = { repository = "amethyst/amethyst", branch = "develop" }
-travis-ci = { repository = "amethyst/amethyst" }
+travis-ci = { repository = "amethyst/amethyst", branch = "develop" }
 
 [features]
 profiler = ["thread_profiler/thread_profiler"]
 
 [dependencies]
+amethyst_config = { path = "amethyst_config", version = "0.3.0" }
 amethyst_renderer = { path = "amethyst_renderer", version = "0.5" }
 cgmath = "0.14"
 dds-rs = "0.4"
@@ -34,11 +35,17 @@ rayon = "0.8"
 serde = "0.9.7"
 serde_derive = "0.9.7"
 serde_yaml = "0.6.2"
+smallvec = "0.4"
 specs = "0.9.1"
 thread_profiler = { version = "0.1", optional = true }
+ticketed_lock = "0.1"
 toml = "0.3"
 wavefront_obj = "5.0"
 winit = "0.6"
+
+[target.'cfg(windows)'.dependencies]
+gfx_device_dx11 = "0.4"
+gfx_window_dxgi = "0.5"
 
 [[example]]
 name = "hello_world"
@@ -65,4 +72,4 @@ name = "assets"
 path = "examples/05_assets/main.rs"
 
 [workspace]
-members = ["amethyst_renderer"]
+members = ["amethyst_assets", "amethyst_config", "amethyst_renderer"]
