@@ -1,15 +1,18 @@
 //! Demonstrates several assets-related techniques, including writing a custom
 //! asset loader, and loading assets from various paths.
+//!
+//! TODO: Rewrite for new renderer.
 
 extern crate amethyst;
 extern crate cgmath;
 
 use amethyst::{Application, Event, State, Trans, VirtualKeyCode, WindowEvent};
 use amethyst::asset_manager::{AssetLoader, AssetLoaderRaw, AssetManager, Assets, DirectoryStore};
-use amethyst::config::Element;
+use amethyst::config::Config;
 use amethyst::ecs::World;
 use amethyst::ecs::components::{LocalTransform, Mesh, Texture, Transform};
 use amethyst::ecs::resources::{Camera, Projection, ScreenDimensions};
+use amethyst::ecs::systems::TransformSystem;
 use amethyst::gfx_device::DisplayConfig;
 use amethyst::renderer::{Layer, PointLight, Pipeline, VertexPosNormal};
 use amethyst::renderer::pass::{Clear, DrawShaded};
@@ -30,9 +33,7 @@ impl AssetLoaderRaw for CustomObj {
         let mut vertices = Vec::new();
         let mut normals = Vec::new();
 
-        let trimmed: Vec<&str> = data.lines()
-            .filter(|line| line.len() >= 1)
-            .collect();
+        let trimmed: Vec<&str> = data.lines().filter(|line| line.len() >= 1).collect();
 
         for line in trimmed {
             let nums: Vec<&str> = line.split_whitespace().collect();
@@ -47,9 +48,9 @@ impl AssetLoaderRaw for CustomObj {
         }
 
         Some(CustomObj {
-            vertices: vertices,
-            normals: normals,
-        })
+                 vertices: vertices,
+                 normals: normals,
+             })
     }
 }
 
@@ -59,12 +60,12 @@ impl AssetLoader<Mesh> for CustomObj {
             .iter()
             .zip(obj.normals.iter())
             .map(|(v, n)| {
-                VertexPosNormal {
-                    pos: v.clone(),
-                    normal: n.clone(),
-                    tex_coord: [0.0, 0.0],
-                }
-            })
+                     VertexPosNormal {
+                         pos: v.clone(),
+                         normal: n.clone(),
+                         tex_coord: [0.0, 0.0],
+                     }
+                 })
             .collect::<Vec<_>>();
         AssetLoader::<Mesh>::from_data(assets, vertices)
     }
@@ -74,11 +75,9 @@ struct Example;
 
 impl State for Example {
     fn on_start(&mut self, world: &mut World, assets: &mut AssetManager, pipe: &mut Pipeline) {
-        use amethyst::ecs::Gate;
-
         {
-            let dim = world.read_resource::<ScreenDimensions>().pass();
-            let mut camera = world.write_resource::<Camera>().pass();
+            let dim = world.read_resource::<ScreenDimensions>();
+            let mut camera = world.write_resource::<Camera>();
             let proj = Projection::Perspective {
                 fov: 60.0,
                 aspect_ratio: dim.aspect_ratio,
@@ -120,9 +119,11 @@ impl State for Example {
             let mut trans = LocalTransform::default();
             trans.rotation = Quaternion::from(Euler::new(Deg(90.0), Deg(-90.0), Deg(0.0))).into();
             trans.translation = [5.0, 0.0, 5.0];
-            let rend = assets.create_renderable(mesh, "dark_blue", "green", "white", 1.0)
+            let rend = assets
+                .create_renderable(mesh, "dark_blue", "green", "white", 1.0)
                 .unwrap();
-            world.create_now()
+            world
+                .create_entity()
                 .with(rend)
                 .with(trans)
                 .with(Transform::default())
@@ -130,36 +131,43 @@ impl State for Example {
         }
 
         // Add custom cube object to scene
-        let rend = assets.create_renderable("cuboid", "dark_blue", "green", "white", 1.0)
+        let rend = assets
+            .create_renderable("cuboid", "dark_blue", "green", "white", 1.0)
             .unwrap();
         let mut trans = LocalTransform::default();
         trans.translation = [-5.0, 0.0, 0.0];
         trans.scale = [2.0, 2.0, 2.0];
-        world.create_now()
+        world
+            .create_entity()
             .with(rend)
             .with(trans)
             .with(Transform::default())
             .build();
 
         // Add cube to scene
-        let rend = assets.create_renderable("cube", "crate", "tan", "white", 1.0).unwrap();
+        let rend = assets
+            .create_renderable("cube", "crate", "tan", "white", 1.0)
+            .unwrap();
         let mut trans = LocalTransform::default();
         trans.translation = [5.0, 0.0, 0.0];
         trans.scale = [2.0, 2.0, 2.0];
-        world.create_now()
+        world
+            .create_entity()
             .with(rend)
             .with(trans)
             .with(Transform::default())
             .build();
 
         // Add sphere to scene
-        let rend = assets.create_renderable("sphere", "grass", "green", "white", 1.0)
+        let rend = assets
+            .create_renderable("sphere", "grass", "green", "white", 1.0)
             .unwrap();
         let mut trans = LocalTransform::default();
         trans.translation = [-5.0, 0.0, 7.5];
         trans.rotation = Quaternion::from(Euler::new(Deg(90.0), Deg(0.0), Deg(0.0))).into();
         trans.scale = [0.15, 0.15, 0.15];
-        world.create_now()
+        world
+            .create_entity()
             .with(rend)
             .with(trans)
             .with(Transform::default())
@@ -173,9 +181,7 @@ impl State for Example {
             ..Default::default()
         };
 
-        world.create_now()
-            .with(light)
-            .build();
+        world.create_entity().with(light).build();
 
         // Set up rendering pipeline
         let layer = Layer::new("main",
@@ -211,9 +217,11 @@ fn main() {
                               env!("CARGO_MANIFEST_DIR"));
     set_var("AMETHYST_ASSET_DIRS", assets_path);
 
-    let path = format!("{}/examples/05_assets/resources/config.yml",
+    let path = format!("{}/examples/05_assets/resources/config.ron",
                        env!("CARGO_MANIFEST_DIR"));
-    let cfg = DisplayConfig::from_file(path).unwrap();
-    let mut game = Application::build(Example, cfg).done();
+    let cfg = DisplayConfig::load(path);
+    let mut game = Application::build(Example, cfg)
+        .with::<TransformSystem>(TransformSystem::new(), "transform_system", &[])
+        .done();
     game.run();
 }
